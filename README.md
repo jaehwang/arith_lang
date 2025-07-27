@@ -64,27 +64,42 @@ make test_syntax
 
 ## 사용법
 
-### 기본 산술 표현식
+ArithLang은 `.k` 확장자를 사용하는 소스 파일을 읽어 LLVM IR을 생성합니다.
+
+### 명령행 형식
 ```bash
-./arithc "3 + 4 * 2"
-./arithc "(5 + 3) * 2"
-./arithc "10.5 / 2.1"
+./arithc -o <출력파일> <입력파일>
 ```
 
-### 변수 할당 및 출력
+### 소스 파일 작성 (.k 파일)
 ```bash
-./arithc "x = 1; print x;"
-./arithc "y = (10 + 5) * 2; print y;"
-./arithc "a = 3.14; b = 2; print a * b;"
+# example.k 파일 생성
+echo "x = 42; y = x * 2 + 10; print y;" > example.k
+```
+
+### 컴파일 및 실행
+```bash
+# LLVM IR 생성
+./arithc -o output.ll example.k
+
+# 생성된 IR 실행
+lli output.ll
 ```
 
 ## 예제
 
 ### 기본 산술 연산
 ```bash
-$ ./arithc "2 + 3 * 4"
-; ModuleID = 'ArithLang'
+# basic.k 파일 생성
+echo "2 + 3 * 4" > basic.k
 
+# 컴파일
+$ ./arithc -o basic.ll basic.k
+LLVM IR이 성공적으로 생성되었습니다: basic.ll
+
+# 생성된 IR 확인
+$ cat basic.ll
+; ModuleID = 'ArithLang'
 define double @main() {
 entry:
   %multmp = fmul double 3.000000e+00, 4.000000e+00
@@ -95,19 +110,15 @@ entry:
 
 ### 변수 할당과 출력
 ```bash
-$ ./arithc "x=1;print x;"
-; ModuleID = 'ArithLang'
-source_filename = "ArithLang"
+# program.k 파일 생성
+echo "x=42; y=x*2+10; print y;" > program.k
 
-@0 = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
+# 컴파일 및 실행
+$ ./arithc -o program.ll program.k
+LLVM IR이 성공적으로 생성되었습니다: program.ll
 
-define double @main() {
-entry:
-  %printfcall = call i32 (ptr, ...) @printf(ptr @0, double 1.000000e+00)
-  ret double 0.000000e+00
-}
-
-declare i32 @printf(ptr, ...)
+$ lli program.ll
+94.000000
 ```
 
 ## IR 실행 방법
@@ -144,15 +155,21 @@ entry:
 
 ### 방법 1: LLVM 인터프리터 사용
 ```bash
-# IR을 파일로 저장하고 바로 실행
-./arithc "x=1;print x;" > test.ll && lli test.ll
+# 소스 파일 작성
+echo "x=1; print x;" > test.k
+
+# 컴파일 및 실행
+./arithc -o test.ll test.k && lli test.ll
 # 출력: 1.000000
 ```
 
 ### 방법 2: 네이티브 실행파일 컴파일
 ```bash
-# IR을 파일로 저장
-./arithc "x=1;print x;" > test.ll
+# 소스 파일 작성
+echo "x=1; print x;" > test.k
+
+# LLVM IR 생성
+./arithc -o test.ll test.k
 
 # 어셈블리로 컴파일
 llc test.ll -o test.s
@@ -163,4 +180,10 @@ gcc test.s -o test_exec
 # 실행
 ./test_exec
 # 출력: 1.000000
+```
+
+### 도움말 보기
+```bash
+# 사용법 안내
+./arithc
 ```
