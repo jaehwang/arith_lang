@@ -42,6 +42,22 @@ LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는
   }
   ```
 
+## 디렉토리 구조
+
+```
+arith_lang/
+├── CLAUDE.md               # Claude Code용 프로젝트 가이드라인
+├── CMakeLists.txt          # CMake 빌드 설정
+├── README.md               # 프로젝트 문서
+├── syntax.md               # 언어 문법 명세
+├── run.sh                  # 빌드 및 실행 스크립트
+├── test_runner.sh          # 통합 테스트 실행 스크립트
+├── build/                  # CMake 빌드 디렉토리
+├── include/                # 헤더 파일
+├── src/                    # 소스 파일
+└── tests/                  # 테스트 파일
+```
+
 ## 아키텍처
 
 1. **Lexer** (`src/lexer.cpp`): 입력 문자열을 토큰으로 분해
