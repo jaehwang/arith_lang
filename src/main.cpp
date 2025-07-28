@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
         outFile << irString;
         outFile.close();
         
-        std::cout << "LLVM IR이 성공적으로 생성되었습니다: " << outputFile << std::endl;
+        std::cout << "IR이 생성되었습니다: " << outputFile << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "오류: " << e.what() << std::endl;
