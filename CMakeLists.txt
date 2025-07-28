@@ -33,11 +33,23 @@ set(SOURCES
     src/main.cpp
 )
 
-set(TEST_SOURCES
+set(LEXER_TEST_SOURCES
+    src/lexer.cpp
+    tests/test_lexer.cpp
+)
+
+set(PARSER_TEST_SOURCES
     src/lexer.cpp
     src/parser.cpp
     src/codegen.cpp
-    tests/test_syntax.cpp
+    tests/test_parser.cpp
+)
+
+set(INTEGRATION_TEST_SOURCES
+    src/lexer.cpp
+    src/parser.cpp
+    src/codegen.cpp
+    tests/test_integration.cpp
 )
 
 add_executable(arithc ${SOURCES})
@@ -46,8 +58,16 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 target_link_libraries(arithc ${llvm_libs})
 
 # Build tests with downloaded GTest
-add_executable(test_syntax ${TEST_SOURCES})
-target_link_libraries(test_syntax ${llvm_libs} gtest_main)
+add_executable(test_lexer ${LEXER_TEST_SOURCES})
+target_link_libraries(test_lexer gtest_main)
+
+add_executable(test_parser ${PARSER_TEST_SOURCES})
+target_link_libraries(test_parser ${llvm_libs} gtest_main)
+
+add_executable(test_integration ${INTEGRATION_TEST_SOURCES})
+target_link_libraries(test_integration ${llvm_libs} gtest_main)
 
 enable_testing()
-add_test(NAME SyntaxTests COMMAND test_syntax)
+add_test(NAME LexerTests COMMAND test_lexer)
+add_test(NAME ParserTests COMMAND test_parser)
+add_test(NAME IntegrationTests COMMAND test_integration)

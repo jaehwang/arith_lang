@@ -1,70 +1,5 @@
 #include <gtest/gtest.h>
 #include "lexer.h"
-#include "parser.h"
-#include "ast.h"
-
-class SyntaxTest : public ::testing::Test {
-protected:
-    void SetUp() override {}
-    void TearDown() override {}
-};
-
-TEST_F(SyntaxTest, AssignmentAndPrint) {
-    std::string input = "x=1;print x;";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // Test first statement: x=1
-    auto stmt1 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
-    
-    // Consume semicolon after assignment
-    // The parser should handle this internally, but let's check if we need to advance
-    
-    // Test second statement: print x;
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt2, nullptr);
-}
-
-TEST_F(SyntaxTest, BasicExpression) {
-    std::string input = "2 + 3 * 4";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
-TEST_F(SyntaxTest, ParenthesesExpression) {
-    std::string input = "(2 + 3) * 4";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
-TEST_F(SyntaxTest, VariableAssignmentAndUsage) {
-    std::string input = "y = 42; print y;";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt1 = parser.parseStatement();
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
-    ASSERT_NE(stmt2, nullptr);
-}
-
-TEST_F(SyntaxTest, ComplexExpression) {
-    std::string input = "result = (10 + 5) * 2 - 3; print result;";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt1 = parser.parseStatement();
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
-    ASSERT_NE(stmt2, nullptr);
-}
 
 // Comment Processing Tests
 class CommentTest : public ::testing::Test {
@@ -205,14 +140,34 @@ TEST_F(CommentTest, DivisionVsComment) {
     EXPECT_EQ(token5.numValue, 2.0);
 }
 
-// Edge Case Tests
-class EdgeCaseTest : public ::testing::Test {
+TEST_F(CommentTest, CommentAtEndOfFileWithoutNewline) {
+    std::string input = "x = 1; // comment at end";
+    Lexer lexer(input);
+    
+    Token token1 = lexer.getNextToken();
+    EXPECT_EQ(token1.type, TOK_IDENTIFIER);
+    
+    Token token2 = lexer.getNextToken();
+    EXPECT_EQ(token2.type, TOK_ASSIGN);
+    
+    Token token3 = lexer.getNextToken();
+    EXPECT_EQ(token3.type, TOK_NUMBER);
+    
+    Token token4 = lexer.getNextToken();
+    EXPECT_EQ(token4.type, TOK_SEMICOLON);
+    
+    Token token5 = lexer.getNextToken();
+    EXPECT_EQ(token5.type, TOK_EOF);
+}
+
+// Lexer Edge Case Tests
+class LexerEdgeCaseTest : public ::testing::Test {
 protected:
     void SetUp() override {}
     void TearDown() override {}
 };
 
-TEST_F(EdgeCaseTest, EmptyInput) {
+TEST_F(LexerEdgeCaseTest, EmptyInput) {
     std::string input = "";
     Lexer lexer(input);
     
@@ -220,7 +175,7 @@ TEST_F(EdgeCaseTest, EmptyInput) {
     EXPECT_EQ(token.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, WhitespaceOnly) {
+TEST_F(LexerEdgeCaseTest, WhitespaceOnly) {
     std::string input = "   \t\n  \r\n  ";
     Lexer lexer(input);
     
@@ -228,7 +183,7 @@ TEST_F(EdgeCaseTest, WhitespaceOnly) {
     EXPECT_EQ(token.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, SingleCharacterTokens) {
+TEST_F(LexerEdgeCaseTest, SingleCharacterTokens) {
     std::string input = "+";
     Lexer lexer(input);
     
@@ -239,7 +194,7 @@ TEST_F(EdgeCaseTest, SingleCharacterTokens) {
     EXPECT_EQ(token2.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, SingleDigit) {
+TEST_F(LexerEdgeCaseTest, SingleDigit) {
     std::string input = "5";
     Lexer lexer(input);
     
@@ -251,7 +206,7 @@ TEST_F(EdgeCaseTest, SingleDigit) {
     EXPECT_EQ(token2.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, SingleLetter) {
+TEST_F(LexerEdgeCaseTest, SingleLetter) {
     std::string input = "x";
     Lexer lexer(input);
     
@@ -263,7 +218,7 @@ TEST_F(EdgeCaseTest, SingleLetter) {
     EXPECT_EQ(token2.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, VeryLongIdentifier) {
+TEST_F(LexerEdgeCaseTest, VeryLongIdentifier) {
     std::string input = "very_long_identifier_name_with_underscores_123";
     Lexer lexer(input);
     
@@ -272,7 +227,7 @@ TEST_F(EdgeCaseTest, VeryLongIdentifier) {
     EXPECT_EQ(token.value, "very_long_identifier_name_with_underscores_123");
 }
 
-TEST_F(EdgeCaseTest, VeryLargeNumber) {
+TEST_F(LexerEdgeCaseTest, VeryLargeNumber) {
     std::string input = "123456789.987654321";
     Lexer lexer(input);
     
@@ -281,7 +236,7 @@ TEST_F(EdgeCaseTest, VeryLargeNumber) {
     EXPECT_DOUBLE_EQ(token.numValue, 123456789.987654321);
 }
 
-TEST_F(EdgeCaseTest, DecimalPointOnly) {
+TEST_F(LexerEdgeCaseTest, DecimalPointOnly) {
     std::string input = ".";
     Lexer lexer(input);
     
@@ -289,7 +244,7 @@ TEST_F(EdgeCaseTest, DecimalPointOnly) {
     EXPECT_THROW(lexer.getNextToken(), std::exception);
 }
 
-TEST_F(EdgeCaseTest, NumberWithLeadingZeros) {
+TEST_F(LexerEdgeCaseTest, NumberWithLeadingZeros) {
     std::string input = "0001.2300";
     Lexer lexer(input);
     
@@ -298,7 +253,7 @@ TEST_F(EdgeCaseTest, NumberWithLeadingZeros) {
     EXPECT_DOUBLE_EQ(token.numValue, 1.23);
 }
 
-TEST_F(EdgeCaseTest, ConsecutiveOperators) {
+TEST_F(LexerEdgeCaseTest, ConsecutiveOperators) {
     std::string input = "+-*/";
     Lexer lexer(input);
     
@@ -318,7 +273,7 @@ TEST_F(EdgeCaseTest, ConsecutiveOperators) {
     EXPECT_EQ(token5.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, MultiCharacterOperatorEdgeCases) {
+TEST_F(LexerEdgeCaseTest, MultiCharacterOperatorEdgeCases) {
     std::string input = ">= <= == != > < =";
     Lexer lexer(input);
     
@@ -347,27 +302,7 @@ TEST_F(EdgeCaseTest, MultiCharacterOperatorEdgeCases) {
     EXPECT_EQ(token8.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, CommentAtEndOfFileWithoutNewline) {
-    std::string input = "x = 1; // comment at end";
-    Lexer lexer(input);
-    
-    Token token1 = lexer.getNextToken();
-    EXPECT_EQ(token1.type, TOK_IDENTIFIER);
-    
-    Token token2 = lexer.getNextToken();
-    EXPECT_EQ(token2.type, TOK_ASSIGN);
-    
-    Token token3 = lexer.getNextToken();
-    EXPECT_EQ(token3.type, TOK_NUMBER);
-    
-    Token token4 = lexer.getNextToken();
-    EXPECT_EQ(token4.type, TOK_SEMICOLON);
-    
-    Token token5 = lexer.getNextToken();
-    EXPECT_EQ(token5.type, TOK_EOF);
-}
-
-TEST_F(EdgeCaseTest, OnlySlashCharacter) {
+TEST_F(LexerEdgeCaseTest, OnlySlashCharacter) {
     std::string input = "/";
     Lexer lexer(input);
     
@@ -378,7 +313,7 @@ TEST_F(EdgeCaseTest, OnlySlashCharacter) {
     EXPECT_EQ(token2.type, TOK_EOF);
 }
 
-TEST_F(EdgeCaseTest, IncompleteComment) {
+TEST_F(LexerEdgeCaseTest, IncompleteComment) {
     std::string input = "x = 1 /";
     Lexer lexer(input);
     
@@ -396,178 +331,6 @@ TEST_F(EdgeCaseTest, IncompleteComment) {
     
     Token token5 = lexer.getNextToken();
     EXPECT_EQ(token5.type, TOK_EOF);
-}
-
-// Parser Edge Case Tests
-class ParserEdgeCaseTest : public ::testing::Test {
-protected:
-    void SetUp() override {}
-    void TearDown() override {}
-};
-
-TEST_F(ParserEdgeCaseTest, EmptyInputParsing) {
-    std::string input = "";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // Empty input should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, OnlyWhitespaceParsing) {
-    std::string input = "   \t\n  ";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // Whitespace only should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, OnlyCommentParsing) {
-    std::string input = "// This is just a comment";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // Comment only should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, SingleNumberExpression) {
-    std::string input = "42";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, SingleVariableExpression) {
-    std::string input = "x";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, MinimalAssignment) {
-    std::string input = "x=1";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, MinimalPrint) {
-    std::string input = "print 1;";  // Add semicolon
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, NestedParentheses) {
-    std::string input = "((((1))))";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, MinimalIfStatement) {
-    std::string input = "if(1){x=1;}";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, MinimalWhileStatement) {
-    std::string input = "while(1){x=1;}";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, EmptyBlock) {
-    std::string input = "if(1){}";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, OperatorWithoutOperands) {
-    std::string input = "+";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // This should fail gracefully or throw an exception
-    EXPECT_THROW(parser.parse(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, UnmatchedOpenParenthesis) {
-    std::string input = "(1 + 2";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // This should fail gracefully or throw an exception
-    EXPECT_THROW(parser.parse(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, UnmatchedCloseParenthesis) {
-    std::string input = "1 + 2)";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-    // Note: This might parse successfully as "1 + 2" and leave ")" unconsumed
-}
-
-TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
-    std::string input = "x = 1 y = 2";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto stmt1 = parser.parseStatement();
-    EXPECT_NE(stmt1, nullptr);
-    
-    // Second statement might fail without semicolon
-    auto stmt2 = parser.parseStatement();
-    // This behavior depends on parser implementation
-}
-
-TEST_F(ParserEdgeCaseTest, ChainedComparisons) {
-    // This tests operator precedence edge cases
-    std::string input = "1 < 2 < 3";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-    // This should parse as (1 < 2) < 3
-}
-
-TEST_F(ParserEdgeCaseTest, MaximumNestingDepth) {
-    // Test deeply nested expressions
-    std::string input = "1";
-    for (int i = 0; i < 100; i++) {
-        input = "(" + input + ")";
-    }
-    
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
 }
 
 int main(int argc, char **argv) {

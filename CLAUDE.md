@@ -18,7 +18,7 @@ cmake --build build
 # Clean rebuild
 rm -rf build && mkdir build && cd build && cmake .. && make
 
-# Run tests
+# Run unit tests
 cd build && make test_syntax && ./test_syntax
 ```
 
