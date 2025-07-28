@@ -17,6 +17,19 @@ void Lexer::skipWhitespace() {
     }
 }
 
+void Lexer::skipComment() {
+    if (currentChar == '/' && pos + 1 < input.length() && input[pos + 1] == '/') {
+        // // 주석: 라인 끝까지 건너뛰기
+        while (currentChar != '\0' && currentChar != '\n') {
+            advance();
+        }
+        // 개행 문자도 건너뛰기
+        if (currentChar == '\n') {
+            advance();
+        }
+    }
+}
+
 double Lexer::readNumber() {
     std::string numStr;
     
@@ -40,10 +53,20 @@ std::string Lexer::readIdentifier() {
 }
 
 Token Lexer::getNextToken() {
-    skipWhitespace();
-    
-    if (currentChar == '\0') {
-        return Token(TOK_EOF);
+    while (true) {
+        skipWhitespace();
+        
+        if (currentChar == '\0') {
+            return Token(TOK_EOF);
+        }
+        
+        // 주석 확인 및 처리
+        if (currentChar == '/' && pos + 1 < input.length() && input[pos + 1] == '/') {
+            skipComment();
+            continue; // 주석을 건너뛰고 다시 토큰 찾기
+        }
+        
+        break; // 주석이 아니면 토큰 처리 진행
     }
     
     if (std::isdigit(currentChar)) {

@@ -45,6 +45,7 @@ private:
     
     void advance();
     void skipWhitespace();
+    void skipComment();
     double readNumber();
     std::string readIdentifier();
     

@@ -11,10 +11,14 @@
 
 static std::unique_ptr<CodeGen> codeGenInstance;
 
-CodeGen::CodeGen(const std::string& moduleName) {
+CodeGen::CodeGen(const std::string& moduleName, const std::string& sourceFile) : sourceFileName(sourceFile) {
     context = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>(moduleName, *context);
     builder = std::make_unique<llvm::IRBuilder<>>(*context);
+    
+    if (!sourceFileName.empty()) {
+        module->setSourceFileName(sourceFileName);
+    }
 }
 
 llvm::AllocaInst* CodeGen::createVariable(const std::string& name) {
@@ -57,6 +61,13 @@ llvm::Function* CodeGen::getPrintfDeclaration() {
 
 void CodeGen::printModule() {
     module->print(llvm::outs(), nullptr);
+}
+
+void CodeGen::setSourceFileName(const std::string& filename) {
+    sourceFileName = filename;
+    if (module) {
+        module->setSourceFileName(filename);
+    }
 }
 
 llvm::Value* NumberExprAST::codegen() {
@@ -271,8 +282,8 @@ llvm::Value* BlockAST::codegen() {
     return lastValue ? lastValue : llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
 }
 
-void initializeCodeGen(const std::string& moduleName) {
-    codeGenInstance = std::make_unique<CodeGen>(moduleName);
+void initializeCodeGen(const std::string& moduleName, const std::string& sourceFile) {
+    codeGenInstance = std::make_unique<CodeGen>(moduleName, sourceFile);
 }
 
 CodeGen& getCodeGen() {

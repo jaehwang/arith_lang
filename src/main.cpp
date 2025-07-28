@@ -11,7 +11,7 @@
 #include <fstream>
 #include <sstream>
 
-void initializeCodeGen(const std::string& moduleName);
+void initializeCodeGen(const std::string& moduleName, const std::string& sourceFile = "");
 CodeGen& getCodeGen();
 
 void printUsage(const char* programName) {
@@ -24,6 +24,29 @@ void printUsage(const char* programName) {
     std::cout << "  " << programName << " -o output.ll input.k\n";
     std::cout << "  " << programName << " -o result.ll program.k\n\n";
     std::cout << "입력 파일은 .k 확장자를 사용합니다.\n";
+}
+
+std::string pathToModuleID(const std::string& path) {
+    std::string result = path;
+    
+    // .k 확장자 제거
+    if (result.length() >= 2 && result.substr(result.length() - 2) == ".k") {
+        result = result.substr(0, result.length() - 2);
+    }
+    
+    // 경로 구분자를 점으로 변경
+    for (char& c : result) {
+        if (c == '/' || c == '\\') {
+            c = '.';
+        }
+    }
+    
+    // 시작이 점이면 제거
+    if (!result.empty() && result[0] == '.') {
+        result = result.substr(1);
+    }
+    
+    return result;
 }
 
 std::string readFile(const std::string& filename) {
@@ -57,7 +80,8 @@ int main(int argc, char* argv[]) {
         // 입력 파일 읽기
         std::string input = readFile(inputFile);
         
-        initializeCodeGen("ArithLang");
+        std::string moduleID = pathToModuleID(inputFile);
+        initializeCodeGen(moduleID, inputFile);
         
         auto& codeGen = getCodeGen();
         

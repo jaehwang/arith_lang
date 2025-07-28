@@ -12,9 +12,10 @@ private:
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::map<std::string, llvm::AllocaInst*> namedValues;
+    std::string sourceFileName;
     
 public:
-    CodeGen(const std::string& moduleName);
+    CodeGen(const std::string& moduleName, const std::string& sourceFile = "");
     
     llvm::LLVMContext& getContext() { return *context; }
     llvm::Module& getModule() { return *module; }
@@ -28,4 +29,5 @@ public:
     
     void printModule();
     void writeObjectFile(const std::string& filename);
+    void setSourceFileName(const std::string& filename);
 };
