@@ -131,7 +131,8 @@ ArithLang uses LLVM's alloca/load/store model for mutable variables:
 - Conditional statements (`if-else`)
 - While loops with proper variable scoping
 - Block statements with multiple statements
-- LLVM IR generation
+- Line comments (`// comment text`)
+- LLVM IR generation with source filename tracking
 - IR execution via LLVM interpreter (`lli`)
 
 **Limitations:**
@@ -142,15 +143,46 @@ ArithLang uses LLVM's alloca/load/store model for mutable variables:
 
 ## Testing Strategy
 
+### Automated Integration Tests
+
+The project includes an automated test runner for `.k` source files:
+
+```bash
+# Run all integration tests
+./test_runner.sh
+```
+
+The test runner:
+- Compiles each `.k` file in `tests/k/` directory
+- Executes the generated LLVM IR using `lli`
+- Compares output with expected results specified in `// EXPECTED:` comments
+- Provides colored pass/fail output with test statistics
+
+**Test File Format:**
+```k
+// EXPECTED: 120.000000
+n = 5;
+result = 1;
+while (n > 0) {
+    result = result * n;
+    n = n - 1;
+}
+print result;
+```
+
+### Unit Tests
+
 The project uses Google Test for unit testing. Test files are in the `tests/` directory:
 
 ```bash
-# Run all tests
+# Run all unit tests
 cd build && make test_syntax && ./test_syntax
 
 # Run specific test using CMake's test runner
 cd build && ctest
 ```
+
+### Manual Testing
 
 Manual testing of language features:
 ```bash
