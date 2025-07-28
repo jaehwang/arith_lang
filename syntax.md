@@ -5,10 +5,16 @@
 
 <statement>    ::= <assignment> ";"
                  | "print" <expression> ";"
+                 | "if" "(" <expression> ")" <block> "else" <block>
+                 | "while" "(" <expression> ")" <block>
+
+<block>         ::= "{" <statement>* "}"
 
 <assignment>   ::= <identifier> "=" <expression>
 
-<expression>   ::= <term> ( ("+" | "-") <term> )*
+<expression>   ::= <comparison> ( ("+" | "-") <comparison> )*
+
+<comparison>   ::= <term> ( (">" | "<" | ">=" | "<=" | "==" | "!=") <term> )*
 
 <term>         ::= <factor> ( ("*" | "/") <factor> )*
 

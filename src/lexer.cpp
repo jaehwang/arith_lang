@@ -55,24 +55,55 @@ Token Lexer::getNextToken() {
         std::string identifier = readIdentifier();
         if (identifier == "print") {
             return Token(TOK_PRINT, identifier);
+        } else if (identifier == "if") {
+            return Token(TOK_IF, identifier);
+        } else if (identifier == "else") {
+            return Token(TOK_ELSE, identifier);
+        } else if (identifier == "while") {
+            return Token(TOK_WHILE, identifier);
         }
         return Token(TOK_IDENTIFIER, identifier);
     }
     
-    TokenType tokenType = static_cast<TokenType>(currentChar);
+    char ch = currentChar;
     advance();
     
-    switch (tokenType) {
-        case TOK_PLUS:
-        case TOK_MINUS:
-        case TOK_MULTIPLY:
-        case TOK_DIVIDE:
-        case TOK_LPAREN:
-        case TOK_RPAREN:
-        case TOK_SEMICOLON:
-        case TOK_ASSIGN:
-            return Token(tokenType, std::string(1, static_cast<char>(tokenType)));
+    switch (ch) {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '(':
+        case ')':
+        case ';':
+        case '{':
+        case '}':
+            return Token(static_cast<TokenType>(ch), std::string(1, ch));
+        case '=':
+            if (currentChar == '=') {
+                advance();
+                return Token(TOK_EQ, "==");
+            }
+            return Token(TOK_ASSIGN, "=");
+        case '>':
+            if (currentChar == '=') {
+                advance();
+                return Token(TOK_GTE, ">=");
+            }
+            return Token(TOK_GT, ">");
+        case '<':
+            if (currentChar == '=') {
+                advance();
+                return Token(TOK_LTE, "<=");
+            }
+            return Token(TOK_LT, "<");
+        case '!':
+            if (currentChar == '=') {
+                advance();
+                return Token(TOK_NEQ, "!=");
+            }
+            throw std::runtime_error("Unknown character: !");
         default:
-            throw std::runtime_error("Unknown character: " + std::string(1, static_cast<char>(tokenType)));
+            throw std::runtime_error("Unknown character: " + std::string(1, ch));
     }
 }

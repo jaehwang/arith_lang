@@ -7,6 +7,9 @@ enum TokenType {
     TOK_NUMBER = -2,
     TOK_IDENTIFIER = -3,
     TOK_PRINT = -4,
+    TOK_IF = -5,
+    TOK_ELSE = -6,
+    TOK_WHILE = -7,
     TOK_PLUS = '+',
     TOK_MINUS = '-',
     TOK_MULTIPLY = '*',
@@ -14,7 +17,15 @@ enum TokenType {
     TOK_LPAREN = '(',
     TOK_RPAREN = ')',
     TOK_SEMICOLON = ';',
-    TOK_ASSIGN = '='
+    TOK_ASSIGN = '=',
+    TOK_LBRACE = '{',
+    TOK_RBRACE = '}',
+    TOK_GT = '>',
+    TOK_LT = '<',
+    TOK_GTE = -8,
+    TOK_LTE = -9,
+    TOK_EQ = -10,
+    TOK_NEQ = -11
 };
 
 struct Token {

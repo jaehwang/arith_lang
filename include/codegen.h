@@ -11,7 +11,7 @@ private:
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::IRBuilder<>> builder;
-    std::map<std::string, llvm::Value*> namedValues;
+    std::map<std::string, llvm::AllocaInst*> namedValues;
     
 public:
     CodeGen(const std::string& moduleName);
@@ -20,8 +20,9 @@ public:
     llvm::Module& getModule() { return *module; }
     llvm::IRBuilder<>& getBuilder() { return *builder; }
     
-    llvm::Value* getVariable(const std::string& name);
-    void setVariable(const std::string& name, llvm::Value* value);
+    llvm::AllocaInst* createVariable(const std::string& name);
+    llvm::AllocaInst* getVariable(const std::string& name);
+    void setVariable(const std::string& name, llvm::AllocaInst* alloca);
     
     llvm::Function* getPrintfDeclaration();
     

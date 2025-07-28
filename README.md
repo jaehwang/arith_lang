@@ -5,23 +5,62 @@ LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는
 ## 기능
 
 - 기본 산술 연산: +, -, *, /
+- 비교 연산: >, <, >=, <=, ==, !=
 - 괄호를 이용한 연산 우선순위 제어
 - 부동소수점 숫자 지원
 - 변수 할당 및 사용 (x = 1)
 - Print 문 지원 (print x)
+- 조건문 지원 (if-else)
+- 반복문 지원 (while)
 - LLVM IR 코드 생성
 - IR 실행 지원
 
 ## Syntax
 
-[Syntax](syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다. 이 문서는 기본적인 산술 연산, 변수 할당, 출력 등을 지원합니다.
+[Syntax](syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다.
+
+### 지원되는 문법 요소
+
+- **산술 연산**: `+`, `-`, `*`, `/` (우선순위 지원)
+- **비교 연산**: `>`, `<`, `>=`, `<=`, `==`, `!=`
+- **변수**: 할당 및 참조 (`x = 42`)
+- **출력**: `print` 문 (`print x;`)
+- **조건문**: `if-else` 구문
+  ```
+  if (condition) {
+      statements
+  } else {
+      statements
+  }
+  ```
+- **반복문**: `while` 루프
+  ```
+  while (condition) {
+      statements
+  }
+  ```
 
 ## 아키텍처
 
 1. **Lexer** (`src/lexer.cpp`): 입력 문자열을 토큰으로 분해
+   - 산술/비교 연산자, 키워드(`if`, `else`, `while`, `print`), 식별자, 숫자 인식
+   - 다중 문자 연산자 지원 (`>=`, `<=`, `==`, `!=`)
+
 2. **Parser** (`src/parser.cpp`): 토큰을 추상 구문 트리(AST)로 변환
-3. **CodeGen** (`src/codegen.cpp`): AST를 LLVM IR로 변환
-4. **Main** (`src/main.cpp`): 컴파일러 드라이버
+   - 연산자 우선순위 파싱 (Pratt parser 스타일)
+   - 우선순위: 비교연산(5) < 덧셈/뺄셈(10) < 곱셈/나눗셈(40)
+   - 조건문, 반복문, 블록 구문 지원
+
+3. **AST** (`include/ast.h`): 추상 구문 트리 노드들
+   - 표현식: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`, `AssignmentExprAST`
+   - 문장: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
+
+4. **CodeGen** (`src/codegen.cpp`): AST를 LLVM IR로 변환
+   - 변수 저장을 위한 alloca/load/store 명령어 생성
+   - 조건/반복문을 위한 기본 블록 및 분기 명령어 생성
+   - 비교 연산을 위한 LLVM 부동소수점 비교 명령어
+
+5. **Main** (`src/main.cpp`): 컴파일러 드라이버
 
 ## 의존성
 
@@ -119,6 +158,73 @@ LLVM IR이 성공적으로 생성되었습니다: program.ll
 
 $ lli program.ll
 94.000000
+```
+
+### 비교 연산자
+```bash
+# comparison.k 파일 생성
+echo "x = 5; y = 3; if (x > y) { print 1; } else { print 0; }" > comparison.k
+
+# 컴파일 및 실행
+$ ./arithc -o comparison.ll comparison.k
+LLVM IR이 성공적으로 생성되었습니다: comparison.ll
+
+$ lli comparison.ll
+1.000000
+```
+
+### 조건문과 반복문
+```bash
+# loop.k 파일 생성
+echo "x = 3; while (x) { print x; x = x - 1; }" > loop.k
+
+# 컴파일 및 실행
+$ ./arithc -o loop.ll loop.k
+LLVM IR이 성공적으로 생성되었습니다: loop.ll
+
+$ lli loop.ll
+3.000000
+2.000000
+1.000000
+```
+
+### 연산자 우선순위
+```bash
+# precedence.k 파일 생성
+echo "x = 2 + 3 > 4; if (x) { print 1; } else { print 0; }" > precedence.k
+
+# 컴파일 및 실행
+$ ./arithc -o precedence.ll precedence.k
+LLVM IR이 성공적으로 생성되었습니다: precedence.ll
+
+$ lli precedence.ll
+1.000000
+```
+
+### 중첩된 조건문
+```bash
+# nested.k 파일 생성
+echo "x = 10; if (x > 5) { if (x < 15) { print 1; } else { print 2; } } else { print 0; }" > nested.k
+
+# 컴파일 및 실행
+$ ./arithc -o nested.ll nested.k
+LLVM IR이 성공적으로 생성되었습니다: nested.ll
+
+$ lli nested.ll
+1.000000
+```
+
+### 팩토리얼 계산 (반복문 활용)
+```bash
+# factorial.k 파일 생성
+echo "n = 5; result = 1; while (n > 0) { result = result * n; n = n - 1; } print result;" > factorial.k
+
+# 컴파일 및 실행
+$ ./arithc -o factorial.ll factorial.k
+LLVM IR이 성공적으로 생성되었습니다: factorial.ll
+
+$ lli factorial.ll
+120.000000
 ```
 
 ## IR 실행 방법

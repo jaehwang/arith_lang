@@ -63,3 +63,42 @@ public:
     llvm::Value* codegen() override;
     ExprAST* getExpr() const { return expr.get(); }
 };
+
+class IfStmtAST : public ASTNode {
+    std::unique_ptr<ExprAST> condition;
+    std::unique_ptr<ASTNode> thenStmt;
+    std::unique_ptr<ASTNode> elseStmt;
+public:
+    IfStmtAST(std::unique_ptr<ExprAST> condition, 
+              std::unique_ptr<ASTNode> thenStmt,
+              std::unique_ptr<ASTNode> elseStmt)
+        : condition(std::move(condition)), 
+          thenStmt(std::move(thenStmt)), 
+          elseStmt(std::move(elseStmt)) {}
+    llvm::Value* codegen() override;
+    ExprAST* getCondition() const { return condition.get(); }
+    ASTNode* getThenStmt() const { return thenStmt.get(); }
+    ASTNode* getElseStmt() const { return elseStmt.get(); }
+};
+
+class WhileStmtAST : public ASTNode {
+    std::unique_ptr<ExprAST> condition;
+    std::unique_ptr<ASTNode> body;
+public:
+    WhileStmtAST(std::unique_ptr<ExprAST> condition, 
+                 std::unique_ptr<ASTNode> body)
+        : condition(std::move(condition)), 
+          body(std::move(body)) {}
+    llvm::Value* codegen() override;
+    ExprAST* getCondition() const { return condition.get(); }
+    ASTNode* getBody() const { return body.get(); }
+};
+
+class BlockAST : public ASTNode {
+    std::vector<std::unique_ptr<ASTNode>> statements;
+public:
+    BlockAST(std::vector<std::unique_ptr<ASTNode>> statements)
+        : statements(std::move(statements)) {}
+    llvm::Value* codegen() override;
+    const std::vector<std::unique_ptr<ASTNode>>& getStatements() const { return statements; }
+};

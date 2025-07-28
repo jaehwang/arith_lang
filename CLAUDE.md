@@ -49,24 +49,32 @@ The codebase implements a classic compiler pipeline with clear separation of con
 
 ### 1. Lexer (`lexer.h/cpp`)
 - Character-by-character tokenization with lookahead
-- Supports: floating-point numbers, identifiers, operators (`+`, `-`, `*`, `/`), parentheses
+- Supports: floating-point numbers, identifiers, operators (`+`, `-`, `*`, `/`, `>`, `<`, `>=`, `<=`, `==`, `!=`), parentheses
+- Multi-character operator recognition (`>=`, `<=`, `==`, `!=`)
+- Keywords: `if`, `else`, `while`, `print`
 - Token structure: `{type, value, numValue}` with enum-based types
 
 ### 2. Parser (`parser.h/cpp`)
 - Operator precedence parsing (Pratt parser style)
-- Precedence levels: `*/` (40), `+-` (10)
+- Precedence levels: comparison operators (5), `+-` (10), `*/` (40)
 - Recursive descent with left-associative binary operators
+- Control flow parsing: if-else statements, while loops, blocks
 - Error handling via exceptions
 
 ### 3. AST (`ast.h`)
-- Three node types: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`
+- Expression nodes: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`, `AssignmentExprAST`
+- Statement nodes: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
+- Base classes: `ASTNode` (all nodes), `ExprAST` (expressions only)
 - Virtual `codegen()` method for visitor pattern
 - Memory management via `std::unique_ptr`
 
 ### 4. CodeGen (`codegen.h/cpp`)
 - LLVM IR generation using IRBuilder
 - Singleton pattern with global LLVM context/module management
-- Floating-point arithmetic instructions (`fadd`, `fsub`, `fmul`, `fdiv`)
+- Variable storage using alloca/load/store for mutable variables
+- Floating-point arithmetic and comparison instructions
+- Control flow with basic blocks and conditional branches
+- Printf integration for output statements
 
 ### 5. Main Driver (`main.cpp`)
 - File-based command-line interface with `-o` option
@@ -76,11 +84,20 @@ The codebase implements a classic compiler pipeline with clear separation of con
 
 ## Development Guidelines
 
+### Variable Storage Architecture
+ArithLang uses LLVM's alloca/load/store model for mutable variables:
+- Variables are allocated on the stack using `alloca` instructions in function entry block
+- Variable access uses `load` instructions to read values
+- Variable assignment uses `store` instructions to write values
+- This enables proper variable mutation in loops and control flow
+
 ### Adding New Operators
 1. Add token type to `TokenType` enum in `lexer.h`
-2. Update lexer's `getNextToken()` to recognize the operator
-3. Add precedence entry in `Parser` constructor
+2. Update lexer's `getNextToken()` to recognize the operator (handle multi-character ops)
+3. Add precedence entry in `Parser` constructor (`std::map<int, int>`)
 4. Implement operator logic in `BinaryExprAST::codegen()`
+   - Arithmetic: use `CreateFAdd`, `CreateFSub`, etc.
+   - Comparison: use `CreateFCmpOLT`, `CreateFCmpOEQ`, etc. + `CreateUIToFP` for bool-to-double
 
 ### Extending AST Nodes
 - Inherit from `ExprAST` base class
@@ -105,11 +122,15 @@ The codebase implements a classic compiler pipeline with clear separation of con
 ## Current Capabilities & Limitations
 
 **Supports:**
-- Basic arithmetic with correct precedence (`+`, `-`, `*`, `/`)
+- Arithmetic operations with correct precedence (`+`, `-`, `*`, `/`)
+- Comparison operations (`>`, `<`, `>=`, `<=`, `==`, `!=`)
 - Parenthesized expressions
 - Floating-point numbers (double precision)
-- Variable assignment (`x = 1`)
+- Variable assignment and modification (`x = 1`, `x = x + 1`)
 - Print statements (`print x`)
+- Conditional statements (`if-else`)
+- While loops with proper variable scoping
+- Block statements with multiple statements
 - LLVM IR generation
 - IR execution via LLVM interpreter (`lli`)
 
@@ -131,22 +152,27 @@ cd build && make test_syntax && ./test_syntax
 cd build && ctest
 ```
 
-Manual testing of expressions:
+Manual testing of language features:
 ```bash
-# Create test files
-echo "2 + 3" > test1.k
-echo "2 * 3 + 4" > test2.k
-echo "(2 + 3) * 4" > test3.k
-echo "x = 1; print x;" > test4.k
+# Basic arithmetic
+echo "2 + 3 * 4" > basic.k
+./build/arithc -o basic.ll basic.k && lli basic.ll
 
-# Test compilation
-./build/arithc -o test1.ll test1.k  # Should generate IR with ret double 5.000000e+00
-./build/arithc -o test2.ll test2.k  # Should generate IR with ret double 1.000000e+01
-./build/arithc -o test3.ll test3.k  # Should generate IR with ret double 2.000000e+01
-./build/arithc -o test4.ll test4.k  # Should generate IR with printf call
+# Variables and assignment
+echo "x = 42; y = x * 2; print y;" > vars.k
+./build/arithc -o vars.ll vars.k && lli vars.ll
 
-# Test execution
-lli test4.ll  # Should output: 1.000000
+# Comparison operators
+echo "x = 5; y = 3; if (x > y) { print 1; } else { print 0; }" > comp.k
+./build/arithc -o comp.ll comp.k && lli comp.ll
+
+# While loops
+echo "x = 3; while (x) { print x; x = x - 1; }" > loop.k
+./build/arithc -o loop.ll loop.k && lli loop.ll
+
+# Complex example (factorial)
+echo "n = 5; result = 1; while (n > 0) { result = result * n; n = n - 1; } print result;" > factorial.k
+./build/arithc -o factorial.ll factorial.k && lli factorial.ll  # Should output: 120.000000
 ```
 
 ## IR Execution
