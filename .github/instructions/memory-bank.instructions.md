@@ -23,6 +23,9 @@ flowchart TD
 ```
 
 ### Core Files (Required)
+
+memory-bank/ contains the following core files, which are essential for understanding the project:
+
 1. `projectbrief.md`
    - Foundation document that shapes all other files
    - Created at project start if it doesn't exist
