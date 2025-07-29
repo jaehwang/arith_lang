@@ -14,6 +14,11 @@
 void initializeCodeGen(const std::string& moduleName, const std::string& sourceFile = "");
 CodeGen& getCodeGen();
 
+struct CompilerOptions {
+    std::string inputFile;
+    std::string outputFile;
+};
+
 void printUsage(const char* programName) {
     std::cout << "ArithLang - LLVM 기반 산술 표현식 컴파일러\n\n";
     std::cout << "사용법:\n";
@@ -60,87 +65,104 @@ std::string readFile(const std::string& filename) {
     return buffer.str();
 }
 
-int main(int argc, char* argv[]) {
-    // 명령행 인자 검사
+CompilerOptions parseCommandLine(int argc, char* argv[]) {
     if (argc != 4 || std::string(argv[1]) != "-o") {
         printUsage(argv[0]);
-        return 1;
+        throw std::runtime_error("잘못된 명령행 인자");
     }
     
-    std::string outputFile = argv[2];
-    std::string inputFile = argv[3];
+    CompilerOptions options;
+    options.outputFile = argv[2];
+    options.inputFile = argv[3];
     
-    // 입력 파일 확장자 검사
-    if (inputFile.length() < 2 || inputFile.substr(inputFile.length() - 2) != ".k") {
-        std::cerr << "오류: 입력 파일은 .k 확장자를 사용해야 합니다.\n";
-        return 1;
+    if (options.inputFile.length() < 2 || 
+        options.inputFile.substr(options.inputFile.length() - 2) != ".k") {
+        throw std::runtime_error("입력 파일은 .k 확장자를 사용해야 합니다");
     }
     
+    return options;
+}
+
+void setupLLVMFunction(const std::string& inputFile) {
+    std::string moduleID = pathToModuleID(inputFile);
+    initializeCodeGen(moduleID, inputFile);
+    
+    auto& codeGen = getCodeGen();
+    
+    llvm::FunctionType* funcType = llvm::FunctionType::get(
+        llvm::Type::getDoubleTy(codeGen.getContext()), false);
+    llvm::Function* mainFunc = llvm::Function::Create(
+        funcType, llvm::Function::ExternalLinkage, "main", codeGen.getModule());
+    
+    llvm::BasicBlock* entry = llvm::BasicBlock::Create(
+        codeGen.getContext(), "entry", mainFunc);
+    codeGen.getBuilder().SetInsertPoint(entry);
+}
+
+void compileSource(const std::string& input) {
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    bool hasStatements = false;
+    
+    while (!lexer.isAtEnd()) {
+        auto ast = parser.parseStatement();
+        if (!ast) {
+            break;
+        }
+        
+        hasStatements = true;
+        llvm::Value* result = ast->codegen();
+        if (!result) {
+            throw std::runtime_error("코드 생성 실패");
+        }
+    }
+    
+    if (!hasStatements) {
+        throw std::runtime_error("파싱할 구문이 없습니다");
+    }
+    
+    // 함수 종료 처리
+    auto& codeGen = getCodeGen();
+    llvm::Value* zero = llvm::ConstantFP::get(codeGen.getContext(), llvm::APFloat(0.0));
+    codeGen.getBuilder().CreateRet(zero);
+}
+
+void saveIRToFile(const std::string& outputFile) {
+    auto& codeGen = getCodeGen();
+    
+    std::ofstream outFile(outputFile);
+    if (!outFile.is_open()) {
+        throw std::runtime_error("출력 파일을 열 수 없습니다: " + outputFile);
+    }
+    
+    std::string irString;
+    llvm::raw_string_ostream stream(irString);
+    codeGen.getModule().print(stream, nullptr);
+    stream.flush();
+    
+    outFile << irString;
+    outFile.close();
+}
+
+int main(int argc, char* argv[]) {
     try {
+        // 명령행 처리
+        CompilerOptions options = parseCommandLine(argc, argv);
+        
         // 입력 파일 읽기
-        std::string input = readFile(inputFile);
+        std::string input = readFile(options.inputFile);
         
-        std::string moduleID = pathToModuleID(inputFile);
-        initializeCodeGen(moduleID, inputFile);
+        // LLVM 함수 설정
+        setupLLVMFunction(options.inputFile);
         
-        auto& codeGen = getCodeGen();
+        // 소스 컴파일
+        compileSource(input);
         
-        llvm::FunctionType* funcType = llvm::FunctionType::get(
-            llvm::Type::getDoubleTy(codeGen.getContext()), false);
-        llvm::Function* mainFunc = llvm::Function::Create(
-            funcType, llvm::Function::ExternalLinkage, "main", codeGen.getModule());
+        // IR 저장
+        saveIRToFile(options.outputFile);
         
-        llvm::BasicBlock* entry = llvm::BasicBlock::Create(
-            codeGen.getContext(), "entry", mainFunc);
-        codeGen.getBuilder().SetInsertPoint(entry);
-        
-        Lexer lexer(input);
-        Parser parser(lexer);
-        
-        llvm::Value* lastResult = nullptr;
-        bool hasStatements = false;
-        
-        // Parse all statements
-        while (!lexer.isAtEnd()) {
-            auto ast = parser.parseStatement();
-            if (!ast) {
-                break;
-            }
-            
-            hasStatements = true;
-            lastResult = ast->codegen();
-            if (!lastResult) {
-                std::cerr << "코드 생성 실패" << std::endl;
-                return 1;
-            }
-        }
-        
-        if (!hasStatements) {
-            std::cerr << "파싱할 구문이 없습니다" << std::endl;
-            return 1;
-        }
-        
-        // Always return 0.0 for statements (print statements return i32, but we need double)
-        llvm::Value* zero = llvm::ConstantFP::get(codeGen.getContext(), llvm::APFloat(0.0));
-        codeGen.getBuilder().CreateRet(zero);
-        
-        // 출력 파일에 IR 저장
-        std::ofstream outFile(outputFile);
-        if (!outFile.is_open()) {
-            std::cerr << "출력 파일을 열 수 없습니다: " << outputFile << std::endl;
-            return 1;
-        }
-        
-        // IR을 문자열로 변환
-        std::string irString;
-        llvm::raw_string_ostream stream(irString);
-        codeGen.getModule().print(stream, nullptr);
-        stream.flush();
-        
-        outFile << irString;
-        outFile.close();
-        
-        std::cout << "IR이 생성되었습니다: " << outputFile << std::endl;
+        std::cout << "IR이 생성되었습니다: " << options.outputFile << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "오류: " << e.what() << std::endl;
