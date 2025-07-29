@@ -228,7 +228,3 @@ std::unique_ptr<ASTNode> Parser::parseBlock() {
     
     return std::make_unique<BlockAST>(std::move(statements));
 }
-
-std::unique_ptr<ExprAST> Parser::parse() {
-    return parseExpression();
-}

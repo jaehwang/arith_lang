@@ -27,5 +27,4 @@ private:
 public:
     Parser(Lexer& lexer);
     std::unique_ptr<ASTNode> parseStatement();
-    std::unique_ptr<ExprAST> parse();
 };

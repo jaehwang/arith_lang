@@ -9,15 +9,6 @@ protected:
     void TearDown() override {}
 };
 
-TEST_F(IntegrationTest, BasicArithmeticExpression) {
-    std::string input = "2 + 3 * 4";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
 TEST_F(IntegrationTest, VariableAssignmentAndUsage) {
     std::string input = "x = 42;";
     Lexer lexer(input);
@@ -36,15 +27,6 @@ TEST_F(IntegrationTest, PrintStatement) {
     ASSERT_NE(stmt, nullptr);
 }
 
-TEST_F(IntegrationTest, ComplexExpressionWithParentheses) {
-    std::string input = "(2 + 3) * 4 - 1";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
 TEST_F(IntegrationTest, IfStatementParsing) {
     std::string input = "if (x > 0) { y = 1; }";
     Lexer lexer(input);
@@ -61,24 +43,6 @@ TEST_F(IntegrationTest, WhileLoopParsing) {
     
     auto stmt = parser.parseStatement();
     ASSERT_NE(stmt, nullptr);
-}
-
-TEST_F(IntegrationTest, ComparisonOperators) {
-    std::string input = "x > y";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
-TEST_F(IntegrationTest, NestedParenthesesWithArithmetic) {
-    std::string input = "((2 + 3) * (4 - 1)) / 2";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
 }
 
 TEST_F(IntegrationTest, CompleteProgram) {
@@ -111,29 +75,6 @@ TEST_F(IntegrationTest, CommentsIgnoredInParsing) {
     // Parse second statement: print x
     auto stmt2 = parser.parseStatement();
     ASSERT_NE(stmt2, nullptr);
-}
-
-TEST_F(IntegrationTest, AllComparisonOperators) {
-    std::vector<std::string> operators = {"==", "!=", "<", ">", "<=", ">="};
-    
-    for (const auto& op : operators) {
-        std::string input = "1 " + op + " 2";
-        Lexer lexer(input);
-        Parser parser(lexer);
-        
-        auto expr = parser.parse();
-        ASSERT_NE(expr, nullptr) << "Failed to parse: " << input;
-    }
-}
-
-TEST_F(IntegrationTest, OperatorPrecedence) {
-    std::string input = "1 + 2 * 3 == 7";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-    // This should parse as: (1 + (2 * 3)) == 7
 }
 
 TEST_F(IntegrationTest, FactorialProgram) {

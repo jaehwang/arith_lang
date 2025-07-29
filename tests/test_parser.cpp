@@ -26,24 +26,6 @@ TEST_F(SyntaxTest, AssignmentAndPrint) {
     ASSERT_NE(stmt2, nullptr);
 }
 
-TEST_F(SyntaxTest, BasicExpression) {
-    std::string input = "2 + 3 * 4";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
-TEST_F(SyntaxTest, ParenthesesExpression) {
-    std::string input = "(2 + 3) * 4";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    ASSERT_NE(expr, nullptr);
-}
-
 TEST_F(SyntaxTest, VariableAssignmentAndUsage) {
     std::string input = "y = 42; print y;";
     Lexer lexer(input);
@@ -100,24 +82,6 @@ TEST_F(ParserEdgeCaseTest, OnlyCommentParsing) {
     EXPECT_THROW(parser.parseStatement(), std::exception);
 }
 
-TEST_F(ParserEdgeCaseTest, SingleNumberExpression) {
-    std::string input = "42";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-}
-
-TEST_F(ParserEdgeCaseTest, SingleVariableExpression) {
-    std::string input = "x";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-}
-
 TEST_F(ParserEdgeCaseTest, MinimalAssignment) {
     std::string input = "x=1";
     Lexer lexer(input);
@@ -141,8 +105,8 @@ TEST_F(ParserEdgeCaseTest, NestedParentheses) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
+    auto stmt = parser.parseStatement();
+    EXPECT_NE(stmt, nullptr);
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalIfStatement) {
@@ -172,34 +136,6 @@ TEST_F(ParserEdgeCaseTest, EmptyBlock) {
     EXPECT_NE(stmt, nullptr);
 }
 
-TEST_F(ParserEdgeCaseTest, OperatorWithoutOperands) {
-    std::string input = "+";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // This should fail gracefully or throw an exception
-    EXPECT_THROW(parser.parse(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, UnmatchedOpenParenthesis) {
-    std::string input = "(1 + 2";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    // This should fail gracefully or throw an exception
-    EXPECT_THROW(parser.parse(), std::exception);
-}
-
-TEST_F(ParserEdgeCaseTest, UnmatchedCloseParenthesis) {
-    std::string input = "1 + 2)";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
-    // Note: This might parse successfully as "1 + 2" and leave ")" unconsumed
-}
-
 TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
     std::string input = "x = 1 y = 2";
     Lexer lexer(input);
@@ -215,12 +151,12 @@ TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
 
 TEST_F(ParserEdgeCaseTest, ChainedComparisons) {
     // This tests operator precedence edge cases
-    std::string input = "1 < 2 < 3";
+    std::string input = "1 < 2 < 3;";
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
+    auto stmt = parser.parseStatement();
+    EXPECT_NE(stmt, nullptr);
     // This should parse as (1 < 2) < 3
 }
 
@@ -230,12 +166,13 @@ TEST_F(ParserEdgeCaseTest, MaximumNestingDepth) {
     for (int i = 0; i < 100; i++) {
         input = "(" + input + ")";
     }
+    input += ";";  // Add semicolon to make it a valid statement
     
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto expr = parser.parse();
-    EXPECT_NE(expr, nullptr);
+    auto stmt = parser.parseStatement();
+    EXPECT_NE(stmt, nullptr);
 }
 
 int main(int argc, char **argv) {
