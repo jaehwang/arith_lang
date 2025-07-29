@@ -48,6 +48,8 @@ private:
     void skipComment();
     double readNumber();
     std::string readIdentifier();
+    Token handleKeywordOrIdentifier(const std::string& identifier);
+    Token handleOperator(char ch);
     
 public:
     Lexer(const std::string& input);
