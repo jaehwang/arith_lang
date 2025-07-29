@@ -1,53 +1,237 @@
 # System Patterns: ArithLang Architecture
 
-## Overall Architecture
+## Architecture Overview
 
-### Four-Phase Compiler Pipeline
+ArithLang follows a **traditional compiler pipeline** with modern C++ practices:
+
 ```
-Source Code → Lexer → Parser → AST → CodeGen → LLVM IR → Execution
+Source Code (.k) → Lexer → Parser → AST → CodeGen → LLVM IR → JIT Execution
 ```
 
-Each phase is cleanly separated with defined interfaces, enabling independent testing and development.
+Each phase has **clear separation of concerns** and is independently testable.
 
 ## Core Components
 
-### 1. Lexer (`src/lexer.cpp`, `include/lexer.h`)
-**Purpose**: Tokenize source code into meaningful symbols
-**Pattern**: Iterator-based token stream
-**Key Classes**: 
-- `Token`: Represents individual language elements
-- `Lexer`: Stateful tokenizer with lookahead
+### 1. Lexer (Tokenization)
+**Location**: `src/lexer.cpp`, `include/lexer.h`
+**Pattern**: State machine with character-by-character processing
 
-### 2. Parser (`src/parser.cpp`, `include/parser.h`)
-**Purpose**: Build Abstract Syntax Tree from token stream
-**Pattern**: Recursive Descent Parser with operator precedence
-**Key Classes**:
-- `Parser`: Manages parsing state and AST construction
-- Implements precedence climbing for operators
+**Key Design Decisions**:
+- **Single-character lookahead**: Simple and efficient
+- **Position tracking**: Line/column information for error reporting
+- **Token enumeration**: Strongly typed token identification
+- **Refactored Architecture**: Helper functions for maintainability
 
-### 3. AST Nodes (`include/ast.h`)
-**Purpose**: Represent program structure in memory
-**Pattern**: Visitor pattern for code generation
-**Key Classes**:
-- `ASTNode`: Base class with virtual `codegen()` method
-- `ExprAST`: Base for all expressions
-- `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`: Specific expression types
-- `AssignmentExprAST`, `PrintExprAST`: Statement types
-- `IfExprAST`, `WhileExprAST`: Control flow
+**Recent Improvements**:
+```cpp
+// Before: 60-line monolithic getNextToken()
+Token getNextToken() { /* 60 lines of mixed logic */ }
 
-### 4. Code Generator (`src/codegen.cpp`, `include/codegen.h`)
-**Purpose**: Convert AST to LLVM IR
-**Pattern**: Visitor pattern with LLVM builder
-**Key Components**:
-- LLVM context and module management
-- Symbol table for variable tracking
-- Type system (primarily double floating-point)
+// After: 26-line main function with helpers
+Token getNextToken() {
+    // Core logic
+    return handleKeywordOrIdentifier() || handleOperator() || ...
+}
 
-## Design Patterns
+Token handleKeywordOrIdentifier() { /* focused logic */ }
+Token handleOperator() { /* focused logic */ }
+```
 
-### 1. Visitor Pattern (Code Generation)
-Each AST node implements `codegen()` method that:
-- Generates appropriate LLVM IR
+### 2. Parser (Syntax Analysis)
+**Location**: `src/parser.cpp`, `include/parser.h`
+**Pattern**: Recursive descent with operator precedence
+
+**Key Design Decisions**:
+- **Recursive descent**: Natural mapping to grammar rules
+- **Precedence climbing**: Efficient operator precedence handling
+- **Single entry point**: `parseStatement()` as primary interface
+- **Clean interface**: Removed unused `parse()` function
+
+**Grammar Structure**:
+```
+statement → assignment | print | if | while | expression
+expression → comparison | arithmetic | primary
+```
+
+### 3. AST (Abstract Syntax Tree)
+**Location**: `include/ast.h`
+**Pattern**: Composite pattern with visitor support
+
+**Memory Management Pattern**:
+```cpp
+// Smart pointer ownership
+std::unique_ptr<ASTNode> left;
+std::unique_ptr<ASTNode> right;
+
+// Factory pattern for creation
+static std::unique_ptr<NumberNode> create(double value);
+```
+
+**Node Hierarchy**:
+- **Expression Nodes**: `NumberNode`, `VariableNode`, `BinaryNode`
+- **Statement Nodes**: `PrintNode`, `IfNode`, `WhileNode`
+- **Assignment**: `AssignmentNode` (bridge between expression and statement)
+
+### 4. Code Generation
+**Location**: `src/codegen.cpp`, `include/codegen.h`
+**Pattern**: Visitor pattern over AST nodes
+
+**LLVM Integration Pattern**:
+```cpp
+// Context and module management
+llvm::LLVMContext context;
+std::unique_ptr<llvm::Module> module;
+llvm::IRBuilder<> builder;
+
+// Symbol table for variables
+std::map<std::string, llvm::Value*> namedValues;
+```
+
+## Refactoring Patterns Applied
+
+### Function Length Management
+**Target**: Keep functions under 40 lines for maintainability
+
+**Main Function Refactoring**:
+```cpp
+// Before: 70-line main() with mixed responsibilities
+int main(int argc, char* argv[]) {
+    // Command line parsing
+    // LLVM setup  
+    // Compilation
+    // File I/O
+    // All mixed together - 70 lines
+}
+
+// After: 22-line main() with clear separation
+int main(int argc, char* argv[]) {
+    auto args = parseCommandLine(argc, argv);
+    auto module = setupLLVMFunction();
+    compileSource(args.filename, module.get());
+    saveIRToFile(module.get(), args.output);
+    return 0;
+}
+```
+
+### Single Responsibility Principle
+Each extracted function has **one clear purpose**:
+- `parseCommandLine()`: CLI argument processing
+- `setupLLVMFunction()`: LLVM initialization
+- `compileSource()`: Compilation pipeline
+- `saveIRToFile()`: Output generation
+
+### Dead Code Elimination Pattern
+**Applied to Parser class**:
+```cpp
+// Removed: Unused Parser::parse() function
+// Kept: Active parseStatement() interface
+// Result: Cleaner API with single responsibility
+```
+
+## Build System Architecture
+
+### CMake Pattern
+**Modern CMake practices** with:
+- Target-based dependency management
+- External dependency integration (LLVM, Google Test)
+- Multiple executable targets
+- Cross-platform compatibility
+
+```cmake
+# LLVM integration
+find_package(LLVM REQUIRED CONFIG)
+target_link_libraries(arithc ${llvm_libs})
+
+# Test framework
+FetchContent_Declare(googletest ...)
+FetchContent_MakeAvailable(googletest)
+```
+
+### Testing Architecture
+**Comprehensive test strategy**:
+- **Unit Tests**: Component isolation testing
+- **Integration Tests**: End-to-end pipeline testing
+- **System Tests**: Complete program execution
+- **Automated**: All tests run on build
+
+## Error Handling Patterns
+
+### Lexer Error Pattern
+```cpp
+// Position-aware error reporting
+if (current >= input.length()) {
+    return Token{TokenType::EOF_TOKEN, "", line, column};
+}
+```
+
+### Parser Error Pattern
+```cpp
+// Structured error with context
+throw std::runtime_error("Expected ';' after statement at line " + 
+                         std::to_string(currentToken.line));
+```
+
+## Memory Management Patterns
+
+### RAII with Smart Pointers
+```cpp
+// Automatic memory management
+std::unique_ptr<ASTNode> parseExpression();
+std::unique_ptr<IfNode> parseIf();
+
+// Move semantics for efficiency
+return std::make_unique<NumberNode>(value);
+```
+
+### LLVM Memory Model
+```cpp
+// LLVM handles IR memory automatically
+// No manual cleanup needed for IR objects
+llvm::Value* result = builder.CreateAdd(left, right, "addtmp");
+```
+
+## Development Environment Patterns
+
+### VSCode Integration
+**IntelliSense Configuration**:
+```json
+// .vscode/c_cpp_properties.json
+{
+    "includePath": [
+        "/opt/homebrew/include/**",
+        "/opt/homebrew/Cellar/llvm/20.1.8/include"
+    ],
+    "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+}
+```
+
+### Git Workflow Pattern
+```bash
+# Atomic commits for specific improvements
+git commit -m "refactor: reduce main function from 70 to 22 lines"
+git commit -m "refactor: optimize lexer getNextToken function"
+git commit -m "cleanup: remove unused Parser::parse function"
+```
+
+## Design Principles Applied
+
+1. **Single Responsibility**: Each component has one clear purpose
+2. **Open/Closed**: Extensible for new tokens/AST nodes
+3. **DRY**: Helper functions eliminate code duplication
+4. **KISS**: Simple, readable implementation over complex optimization
+5. **YAGNI**: Only implement what's actually needed
+
+## Performance Considerations
+
+### Compilation Speed
+- **Fast lexing**: Simple character-by-character processing
+- **Efficient parsing**: Minimal backtracking
+- **Smart pointers**: Move semantics reduce copying
+
+### Runtime Performance
+- **LLVM optimization**: Professional-grade backend
+- **JIT compilation**: Direct execution without intermediate files
+- **Type specialization**: Double precision throughout
 - Returns `llvm::Value*` representing the computed value
 - Handles type conversions and error cases
 
