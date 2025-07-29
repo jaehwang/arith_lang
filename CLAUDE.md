@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Memory Bank Instructions
+
+**CRITICAL**: Claude must read and follow the memory bank instructions in `.github/instructions/memory-bank.instructions.md` at the start of every session. This defines how Claude should work with the memory bank system.
+
 ## Project Overview
 
 ArithLang is an LLVM-based arithmetic expression compiler written in C++17. It follows a classic four-stage compiler pipeline: Lexer → Parser → AST → CodeGen, transforming mathematical expressions into executable LLVM IR.
