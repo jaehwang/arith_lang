@@ -46,8 +46,19 @@ ArithLang serves as an educational bridge, demonstrating how a programming langu
 3. **Educational Value**: Code serves as good example of compiler construction
 4. **Usability**: Easy to build, run, and experiment with
 
+## Language Specification
+- **Grammar Definition**: Complete BNF grammar specification available in `syntax.md`
+- **Formal Syntax**: Defines all language constructs including:
+  - Arithmetic expressions with proper operator precedence
+  - Variable assignment and usage
+  - Control flow (if/else, while loops)
+  - Print statements for output
+  - Block statements with proper scoping
+- **Implementation Reference**: Parser implementation follows the grammar rules exactly
+
 ## Key Differentiators
 - **LLVM Focus**: Uses industry-standard backend instead of custom VM
 - **Incremental Complexity**: Starts simple, can be extended step by step
 - **Real Execution**: Not just interpretation—actual compiled code execution
 - **Modern C++**: Demonstrates contemporary C++ practices in systems programming
+- **Formal Grammar**: Well-defined BNF syntax specification for clear language semantics

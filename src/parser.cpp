@@ -228,3 +228,18 @@ std::unique_ptr<ASTNode> Parser::parseBlock() {
     
     return std::make_unique<BlockAST>(std::move(statements));
 }
+
+std::unique_ptr<ASTNode> Parser::parseProgram() {
+    std::vector<std::unique_ptr<ASTNode>> statements;
+    
+    while (currentToken.type != TOK_EOF) {
+        auto stmt = parseStatement();
+        if (stmt) {
+            statements.push_back(std::move(stmt));
+        } else {
+            break;
+        }
+    }
+    
+    return std::make_unique<ProgramAST>(std::move(statements));
+}

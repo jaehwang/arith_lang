@@ -14,8 +14,12 @@ TEST_F(IntegrationTest, VariableAssignmentAndUsage) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    ASSERT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(IntegrationTest, PrintStatement) {
@@ -23,8 +27,12 @@ TEST_F(IntegrationTest, PrintStatement) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    ASSERT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(IntegrationTest, IfStatementParsing) {
@@ -32,8 +40,12 @@ TEST_F(IntegrationTest, IfStatementParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    ASSERT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(IntegrationTest, WhileLoopParsing) {
@@ -41,8 +53,12 @@ TEST_F(IntegrationTest, WhileLoopParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    ASSERT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(IntegrationTest, CompleteProgram) {
@@ -50,17 +66,14 @@ TEST_F(IntegrationTest, CompleteProgram) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Parse first statement: x = 5
-    auto stmt1 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
+    // Parse entire program as single AST
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
     
-    // Parse second statement: y = x * 2
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt2, nullptr);
-    
-    // Parse third statement: if (y > 8) { print y; }
-    auto stmt3 = parser.parseStatement();
-    ASSERT_NE(stmt3, nullptr);
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 3);
 }
 
 TEST_F(IntegrationTest, CommentsIgnoredInParsing) {
@@ -68,13 +81,13 @@ TEST_F(IntegrationTest, CommentsIgnoredInParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Parse first statement: x = 1
-    auto stmt1 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
+    // Parse entire program with comments
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
     
-    // Parse second statement: print x
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt2, nullptr);
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 2);
 }
 
 TEST_F(IntegrationTest, FactorialProgram) {
@@ -82,20 +95,14 @@ TEST_F(IntegrationTest, FactorialProgram) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Parse all statements
-    std::vector<std::unique_ptr<ASTNode>> statements;
+    // Parse entire factorial program as single AST
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
     
-    try {
-        while (true) {
-            auto stmt = parser.parseStatement();
-            if (!stmt) break;
-            statements.push_back(std::move(stmt));
-        }
-    } catch (const std::exception& e) {
-        // Expected when reaching EOF
-    }
-    
-    EXPECT_GE(statements.size(), 4); // Should have at least 4 statements
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_GE(programAST->getStatements().size(), 4); // Should have at least 4 statements
 }
 
 int main(int argc, char **argv) {

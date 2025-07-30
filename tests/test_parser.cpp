@@ -14,16 +14,14 @@ TEST_F(SyntaxTest, AssignmentAndPrint) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Test first statement: x=1
-    auto stmt1 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
+    // Parse entire program with two statements
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
     
-    // Consume semicolon after assignment
-    // The parser should handle this internally, but let's check if we need to advance
-    
-    // Test second statement: print x;
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt2, nullptr);
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 2);
 }
 
 TEST_F(SyntaxTest, VariableAssignmentAndUsage) {
@@ -31,10 +29,14 @@ TEST_F(SyntaxTest, VariableAssignmentAndUsage) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt1 = parser.parseStatement();
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
-    ASSERT_NE(stmt2, nullptr);
+    // Parse entire program with two statements
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 2);
 }
 
 TEST_F(SyntaxTest, ComplexExpression) {
@@ -42,10 +44,14 @@ TEST_F(SyntaxTest, ComplexExpression) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt1 = parser.parseStatement();
-    auto stmt2 = parser.parseStatement();
-    ASSERT_NE(stmt1, nullptr);
-    ASSERT_NE(stmt2, nullptr);
+    // Parse entire program with two statements
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 2);
 }
 
 // Parser Edge Case Tests
@@ -60,8 +66,13 @@ TEST_F(ParserEdgeCaseTest, EmptyInputParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Empty input should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
+    // Empty input should return empty program
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 0);
 }
 
 TEST_F(ParserEdgeCaseTest, OnlyWhitespaceParsing) {
@@ -69,8 +80,13 @@ TEST_F(ParserEdgeCaseTest, OnlyWhitespaceParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Whitespace only should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
+    // Whitespace only should return empty program
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 0);
 }
 
 TEST_F(ParserEdgeCaseTest, OnlyCommentParsing) {
@@ -78,8 +94,13 @@ TEST_F(ParserEdgeCaseTest, OnlyCommentParsing) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Comment only should throw an exception when trying to parse
-    EXPECT_THROW(parser.parseStatement(), std::exception);
+    // Comment only should return empty program
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 0);
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalAssignment) {
@@ -87,8 +108,12 @@ TEST_F(ParserEdgeCaseTest, MinimalAssignment) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalPrint) {
@@ -96,8 +121,12 @@ TEST_F(ParserEdgeCaseTest, MinimalPrint) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, NestedParentheses) {
@@ -105,8 +134,12 @@ TEST_F(ParserEdgeCaseTest, NestedParentheses) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalIfStatement) {
@@ -114,8 +147,12 @@ TEST_F(ParserEdgeCaseTest, MinimalIfStatement) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalWhileStatement) {
@@ -123,8 +160,12 @@ TEST_F(ParserEdgeCaseTest, MinimalWhileStatement) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, EmptyBlock) {
@@ -132,8 +173,12 @@ TEST_F(ParserEdgeCaseTest, EmptyBlock) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
@@ -141,12 +186,14 @@ TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt1 = parser.parseStatement();
-    EXPECT_NE(stmt1, nullptr);
+    // Parse entire program - should handle missing semicolon gracefully
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
     
-    // Second statement might fail without semicolon
-    auto stmt2 = parser.parseStatement();
-    // This behavior depends on parser implementation
+    // Cast to ProgramAST to check statements
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_GE(programAST->getStatements().size(), 1); // Should parse at least one statement
 }
 
 TEST_F(ParserEdgeCaseTest, ChainedComparisons) {
@@ -155,8 +202,12 @@ TEST_F(ParserEdgeCaseTest, ChainedComparisons) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
     // This should parse as (1 < 2) < 3
 }
 
@@ -171,8 +222,12 @@ TEST_F(ParserEdgeCaseTest, MaximumNestingDepth) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    auto stmt = parser.parseStatement();
-    EXPECT_NE(stmt, nullptr);
+    auto program = parser.parseProgram();
+    EXPECT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
 int main(int argc, char **argv) {

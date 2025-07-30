@@ -103,23 +103,16 @@ void compileSource(const std::string& input) {
     Lexer lexer(input);
     Parser parser(lexer);
     
-    bool hasStatements = false;
-    
-    while (!lexer.isAtEnd()) {
-        auto ast = parser.parseStatement();
-        if (!ast) {
-            break;
-        }
-        
-        hasStatements = true;
-        llvm::Value* result = ast->codegen();
-        if (!result) {
-            throw std::runtime_error("코드 생성 실패");
-        }
+    // Parse entire program as single AST
+    auto programAST = parser.parseProgram();
+    if (!programAST) {
+        throw std::runtime_error("프로그램 파싱 실패");
     }
     
-    if (!hasStatements) {
-        throw std::runtime_error("파싱할 구문이 없습니다");
+    // Generate IR for entire program
+    llvm::Value* result = programAST->codegen();
+    if (!result) {
+        throw std::runtime_error("코드 생성 실패");
     }
     
     // 함수 종료 처리

@@ -102,3 +102,12 @@ public:
     llvm::Value* codegen() override;
     const std::vector<std::unique_ptr<ASTNode>>& getStatements() const { return statements; }
 };
+
+class ProgramAST : public ASTNode {
+    std::vector<std::unique_ptr<ASTNode>> statements;
+public:
+    ProgramAST(std::vector<std::unique_ptr<ASTNode>> statements)
+        : statements(std::move(statements)) {}
+    llvm::Value* codegen() override;
+    const std::vector<std::unique_ptr<ASTNode>>& getStatements() const { return statements; }
+};

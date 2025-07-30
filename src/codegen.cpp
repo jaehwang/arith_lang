@@ -282,6 +282,17 @@ llvm::Value* BlockAST::codegen() {
     return lastValue ? lastValue : llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
 }
 
+llvm::Value* ProgramAST::codegen() {
+    llvm::Value* lastValue = nullptr;
+    
+    for (const auto& stmt : statements) {
+        lastValue = stmt->codegen();
+        if (!lastValue) return nullptr;
+    }
+    
+    return lastValue ? lastValue : llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
+}
+
 void initializeCodeGen(const std::string& moduleName, const std::string& sourceFile) {
     codeGenInstance = std::make_unique<CodeGen>(moduleName, sourceFile);
 }

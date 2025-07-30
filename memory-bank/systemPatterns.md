@@ -44,13 +44,28 @@ Token handleOperator() { /* focused logic */ }
 **Key Design Decisions**:
 - **Recursive descent**: Natural mapping to grammar rules
 - **Precedence climbing**: Efficient operator precedence handling
-- **Single entry point**: `parseStatement()` as primary interface
-- **Clean interface**: Removed unused `parse()` function
+- **Program-level parsing**: `parseProgram()` as primary public interface
+- **Private implementation**: `parseStatement()` encapsulated for internal use
+- **Grammar compliance**: Perfect alignment with BNF specification in syntax.md
 
 **Grammar Structure**:
 ```
+program → statement*
 statement → assignment | print | if | while | expression
 expression → comparison | arithmetic | primary
+```
+
+**New Architecture Pattern**:
+```cpp
+// Program-level compilation
+std::unique_ptr<ASTNode> parseProgram() {
+    std::vector<std::unique_ptr<ASTNode>> statements;
+    while (currentToken.type != TOK_EOF) {
+        auto stmt = parseStatement();  // private method
+        if (stmt) statements.push_back(std::move(stmt));
+    }
+    return std::make_unique<ProgramAST>(std::move(statements));
+}
 ```
 
 ### 3. AST (Abstract Syntax Tree)
@@ -68,9 +83,10 @@ static std::unique_ptr<NumberNode> create(double value);
 ```
 
 **Node Hierarchy**:
-- **Expression Nodes**: `NumberNode`, `VariableNode`, `BinaryNode`
-- **Statement Nodes**: `PrintNode`, `IfNode`, `WhileNode`
-- **Assignment**: `AssignmentNode` (bridge between expression and statement)
+- **Program Node**: `ProgramAST` (top-level container for statements)
+- **Expression Nodes**: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`
+- **Statement Nodes**: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
+- **Assignment**: `AssignmentExprAST` (bridge between expression and statement)
 
 ### 4. Code Generation
 **Location**: `src/codegen.cpp`, `include/codegen.h`

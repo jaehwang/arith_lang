@@ -23,8 +23,9 @@ private:
     std::unique_ptr<ExprAST> parseNumberExpr();
     std::unique_ptr<ExprAST> parseIdentifierExpr();
     int getTokenPrecedence();
+    std::unique_ptr<ASTNode> parseStatement();
     
 public:
     Parser(Lexer& lexer);
-    std::unique_ptr<ASTNode> parseStatement();
+    std::unique_ptr<ASTNode> parseProgram();
 };
