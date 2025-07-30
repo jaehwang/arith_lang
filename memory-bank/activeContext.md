@@ -90,11 +90,15 @@ The `tests/k/` directory contains working example programs:
 - `test_*.k`: Various language feature demonstrations
 
 ## Development Environment Status
-- ✅ Build system functional (CMake + LLVM)
-- ✅ Test runner script available
-- ✅ Comprehensive test coverage
-- ✅ Example programs available
-- ✅ Generated IR files for inspection
+- ✅ **Build System**: CMake + LLVM integration with standardized build process
+  - Initial build: `mkdir -p build && cd build && cmake .. && make`
+  - Rebuild: `cmake --build build` (from project root)
+- ✅ **Testing Framework**: Comprehensive testing workflow established
+  - Unit tests via `cd build && ctest` (4 test suites)
+  - Integration tests via `./test_runner.sh` (11 system tests)
+  - All tests consistently passing (100% success rate)
+- ✅ **Example Programs**: Working demonstration programs in `tests/k/`
+- ✅ **Generated IR Files**: LLVM IR inspection available in `build/k/`
 
 ## Key Patterns in Use
 - **Visitor Pattern**: AST nodes implement `codegen()` method

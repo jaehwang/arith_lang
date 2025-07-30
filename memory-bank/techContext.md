@@ -58,11 +58,17 @@ build/            # CMake build directory
 
 ## Build Process
 
-### Standard Build
+### Initial Build (from project root)
 ```bash
-mkdir build && cd build
+mkdir -p build
+cd build
 cmake ..
 make
+```
+
+### Rebuild (from project root)
+```bash
+cmake --build build
 ```
 
 ### Build Targets
@@ -72,10 +78,32 @@ make
 - `test_codegen`: Code generation tests
 - `test_integration`: End-to-end tests
 
-### Test Execution
+## Test Execution
+
+### Complete Test Sequence
+Follow this standardized testing sequence:
+
+1. **Build**: Use initial build or rebuild process above
+
+2. **Unit Tests**: Navigate to build directory and run comprehensive unit tests
+   ```bash
+   cd build
+   ctest
+   ```
+
+3. **Integration Tests**: Return to project root and run system tests
+   ```bash
+   cd ..
+   ./test_runner.sh
+   ```
+
+### Individual Test Execution
 ```bash
-./test_runner.sh    # Run all tests
-./build/test_lexer  # Individual test suites
+# Individual unit test suites (from build directory)
+./test_lexer
+./test_parser
+./test_codegen
+./test_integration
 ```
 
 ## LLVM Integration Details
