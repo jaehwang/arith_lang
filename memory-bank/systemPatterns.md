@@ -103,6 +103,23 @@ llvm::IRBuilder<> builder;
 std::map<std::string, llvm::Value*> namedValues;
 ```
 
+**High-Precision Output Pattern**:
+```cpp
+// PrintStmtAST::codegen() - Enhanced precision implementation
+llvm::Value* PrintStmtAST::codegen() {
+    llvm::Value* val = expr->codegen();
+    if (!val) return nullptr;
+    
+    // High-precision format string for scientific accuracy
+    llvm::Constant* formatStr = codeGenInstance->getBuilder()
+        .CreateGlobalString("%.15f\n");  // 15-digit precision
+    
+    // printf call with enhanced precision
+    std::vector<llvm::Value*> args = {formatStr, val};
+    return codeGenInstance->getBuilder().CreateCall(printfFunc, args, "printfcall");
+}
+```
+
 ## Refactoring Patterns Applied
 
 ### Function Length Management

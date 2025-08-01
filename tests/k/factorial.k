@@ -1,4 +1,4 @@
-// EXPECTED: 120.000000
+// EXPECTED: 120.000000000000000
 n = 5;
 result = 1;
 while (n > 0) {

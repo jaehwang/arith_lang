@@ -168,6 +168,12 @@ Follow this standardized testing sequence:
 - **Memory Management**: Simple stack allocation only
 - **Error Recovery**: Limited error recovery in parser
 
+### Output Precision Specification
+- **Print Precision**: Fixed at 15 decimal places using "%.15f" printf format
+- **Rationale**: Matches IEEE 754 double precision effective digits (~15-17)
+- **Scientific Accuracy**: Enables precise display of mathematical calculations (e.g., Pi)
+- **Trade-off**: Fixed precision vs. configurable precision complexity
+
 ### LLVM Dependencies
 - Requires LLVM development headers
 - Platform-specific LLVM installation requirements

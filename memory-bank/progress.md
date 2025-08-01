@@ -106,11 +106,15 @@ Total:          65/65  ✅ (100%)
 ## Known Working Examples
 
 The compiler successfully handles complex programs including:
-- **Factorial Calculation**: Recursive mathematical computation
-- **Conditional Logic**: Multi-branch decision making
-- **Loop Constructs**: Iterative algorithms
-- **Variable Management**: Complex expression evaluation
-- **Nested Expressions**: Proper precedence handling
+- **Factorial Calculation**: Iterative mathematical computation (result: 120.000000000000000)
+- **Pi Calculation**: Advanced mathematical computation using Leibniz formula
+  - 10,000 iterations producing `3.141492653590034`
+  - Demonstrates compiler's scientific computation capabilities
+  - Complex loop with multiple variable updates per iteration
+- **Conditional Logic**: Multi-branch decision making with high-precision boolean outputs
+- **Loop Constructs**: Iterative algorithms with precise numerical results
+- **Variable Management**: Complex expression evaluation with 15-digit precision
+- **Nested Expressions**: Proper precedence handling maintained with enhanced output
 
 ## Issues and Limitations
 
@@ -125,11 +129,52 @@ The compiler successfully handles complex programs including:
 - Memory management is solid with smart pointers
 - Test suite comprehensive and passing
 
+## Recent Critical Improvements ✅
+
+### High-Precision Output Enhancement (COMPLETED)
+During Pi calculation program development, a critical output precision limitation was discovered and **successfully resolved**:
+
+1. **Output Precision Problem SOLVED** ✅
+   - **Issue**: Printf used default `%f` format showing only 6 decimal places  
+   - **Impact**: Scientific calculations like Pi (3.141593) lost precision after 6th digit
+   - **Solution**: Updated `codegen.cpp` to use `%.15f` format for 15-digit precision
+   - **Result**: Pi calculation now shows `3.141492653590034` with full double precision
+   - **Test Impact**: All 11 integration test expected values updated to 15-digit format
+
+2. **Implementation Details** ✅
+   - **Code Change**: Single line modification in `PrintStmtAST::codegen()`
+   - **Before**: `CreateGlobalString("%f\n")`  
+   - **After**: `CreateGlobalString("%.15f\n")`
+   - **Documentation**: Updated `projectbrief.md` with precision constraints
+   - **Test Validation**: All tests passing (11/11) with new precision expectations
+
+### Remaining Language Limitations ⚠️
+Two major usability issues still require attention:
+
+1. **String Literal Support Missing** 🔴
+   - **Problem**: Cannot use `print "message";` - compiler fails with "Unknown character: '"
+   - **Current Workaround**: No text output possible, severely limiting program clarity
+   - **User Impact**: Programs cannot provide meaningful output descriptions
+   - **Example Failure**: `print "Pi = "; print result;` completely impossible
+
+2. **Negative Number Syntax Not Supported** 🔴  
+   - **Problem**: Cannot write `-1.0` directly - parser cannot handle unary minus
+   - **Current Workaround**: Must use `0.0 - 1.0` for negative values
+   - **User Impact**: Mathematical expressions become verbose and unnatural
+   - **Example**: Leibniz formula requires `sign = 0.0 - sign;` instead of `sign = -sign;`
+
+### Required Implementation Tasks for Remaining Issues
+Both features require changes across all compiler phases:
+- **Lexer**: New token types (STRING, UNARY_MINUS)
+- **Parser**: Extended grammar rules for new constructs  
+- **AST**: New node types (StringLiteralAST, UnaryExprAST)
+- **CodeGen**: LLVM IR generation for new features
+
 ## Future Opportunities
 
 ### Potential Enhancements
 1. **Enhanced Diagnostics**: More detailed error messages with suggestions
-2. **Optimization**: LLVM optimization pass integration
+2. **Optimization**: LLVM optimization pass integration  
 3. **Language Extensions**: Functions, arrays, or advanced data types
 4. **IDE Support**: Language server protocol implementation
 

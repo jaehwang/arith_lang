@@ -142,8 +142,8 @@ llvm::Value* PrintStmtAST::codegen() {
     llvm::Value* val = expr->codegen();
     if (!val) return nullptr;
     
-    // Create format string "%f\n"
-    llvm::Constant* formatStr = codeGenInstance->getBuilder().CreateGlobalString("%f\n");
+    // Create format string "%.15f\n" for high precision output
+    llvm::Constant* formatStr = codeGenInstance->getBuilder().CreateGlobalString("%.15f\n");
     
     // Get printf function
     llvm::Function* printfFunc = codeGenInstance->getPrintfDeclaration();

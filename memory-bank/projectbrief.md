@@ -12,7 +12,7 @@ ArithLang is an LLVM-based arithmetic expression compiler that transforms simple
 - **Control Flow**: 
   - Conditional statements (if-else)
   - Loop constructs (while)
-- **I/O**: Print statements for output
+- **I/O**: Print statements for output (15-digit precision)
 - **Comments**: Line comments using // syntax
 - **Data Types**: Floating-point numbers (double precision)
 
@@ -36,6 +36,14 @@ ArithLang is an LLVM-based arithmetic expression compiler that transforms simple
 - Advanced language features (classes, modules)
 - Optimization passes
 - Error recovery mechanisms
+
+## Implementation Constraints
+
+### Output Precision
+- **Print Statement Precision**: Fixed at 15 decimal places using "%.15f" format
+- **Rationale**: Matches IEEE 754 double precision effective digits (~15-17)
+- **Trade-off**: Higher precision output vs. configurable precision complexity
+- **Future Enhancement**: Could be extended to support configurable precision
 
 ## Success Criteria
 1. Successfully compile and execute arithmetic expressions

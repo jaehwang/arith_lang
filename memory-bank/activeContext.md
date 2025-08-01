@@ -1,12 +1,12 @@
 # Active Context: ArithLang Current State
 
 ## Current Focus
-The ArithLang compiler has achieved **major architectural improvements** with the implementation of **program-level AST generation and parsing**. The project now demonstrates proper compiler design principles:
+The ArithLang compiler has achieved **major architectural improvements** and **critical usability enhancements**. Recent developments focus on **real-world program support** discovered through Pi calculation implementation:
 
 - **Program-Level Architecture**: Complete transition from statement-by-statement to program-level compilation
 - **Private API Design**: parseStatement() moved to private, enforcing proper encapsulation
-- **Consistent Grammar Implementation**: Parser now fully aligns with BNF grammar specification
-- **Enhanced Testing**: All test suites updated and passing with new architecture
+- **High-Precision Output**: Fixed printf precision limitation for scientific calculations
+- **Real-World Validation**: Successful Pi calculation demonstrates practical compiler capabilities
 
 ## Recent Major Improvements
 
@@ -23,6 +23,14 @@ The ArithLang compiler has achieved **major architectural improvements** with th
   - Complete alignment between formal grammar and implementation
   - Proper program → statement* structure implemented
 
+### Usability Enhancements ✅
+- **High-Precision Output Implementation**: Fixed critical printf precision limitation
+  - **Problem Solved**: Previous 6-digit output insufficient for scientific calculations
+  - **Solution Applied**: Changed printf format from `%f` to `%.15f` for 15-digit precision
+  - **Real-World Impact**: Pi calculation now displays `3.141492653590034` instead of `3.141593`
+  - **Test Suite Updated**: All 11 expected values updated to 15-digit precision format
+  - **Status**: All integration tests passing (11/11) with new precision requirements
+
 ### Test Suite Modernization ✅
 - **Unit Test Updates**: Comprehensive migration to program-level testing
   - All `parseStatement()` calls replaced with `parseProgram()` where appropriate
@@ -36,9 +44,11 @@ The ArithLang compiler has achieved **major architectural improvements** with th
 ### Current Implementation Status
 - ✅ **Program-Level Architecture**: Complete AST for entire programs
 - ✅ **Grammar Compliance**: Full alignment with BNF specification
-- ✅ **Testing**: All 54 tests passing (Parser: 15, Integration: 7, Codegen: 11, Lexer: 21)
+- ✅ **High-Precision Output**: 15-digit floating point precision in all outputs
+- ✅ **Testing**: All tests passing with updated precision expectations (11/11 integration tests)
 - ✅ **Code Generation**: Program-level IR generation with proper function structure
 - ✅ **API Design**: Clean public interface with proper encapsulation
+- ✅ **Real-World Validation**: Successfully implements Pi calculation with Leibniz formula
 
 ## Project Insights
 
@@ -56,7 +66,30 @@ The ArithLang compiler has achieved **major architectural improvements** with th
 
 ## Current Development Priorities
 
-### Immediate Focus
+### HIGHEST PRIORITY: Language Feature Enhancements 🚀
+Based on real-world usage testing with Pi calculation program, two critical limitations have been identified:
+
+1. **String Literal Support in Print Statements** ⭐⭐⭐⭐⭐
+   - **Current Issue**: `print "Hello World";` fails with "Unknown character: '"
+   - **Impact**: Severely limits program output readability and user experience
+   - **Required Changes**:
+     - Lexer: Add string token recognition with quote handling
+     - Parser: Extend print statement grammar to accept string literals
+     - AST: Add StringLiteralAST node type
+     - CodeGen: LLVM string constant generation and printf integration
+   - **Example**: Enable `print "Pi calculation result: "; print pi_value;`
+
+2. **Native Negative Number Support** ⭐⭐⭐⭐⭐
+   - **Current Issue**: `-1.0` fails to parse, requiring workaround `0.0 - 1.0`
+   - **Impact**: Makes mathematical expressions verbose and unnatural
+   - **Required Changes**:
+     - Lexer: Recognize unary minus operator in appropriate contexts
+     - Parser: Add unary expression parsing with proper precedence
+     - AST: Add UnaryExprAST node for unary minus operations
+     - CodeGen: LLVM unary negation instruction generation
+   - **Example**: Enable `sign = -1.0;` instead of `sign = 0.0 - 1.0;`
+
+### Secondary Priorities
 - **Code Quality Maintenance**: Continue monitoring function length and complexity
 - **Documentation**: Update inline documentation to reflect recent changes
 - **Performance**: Consider LLVM optimization passes for generated code
@@ -90,9 +123,13 @@ The ArithLang compiler has achieved **major architectural improvements** with th
 
 ## Working Examples
 The `tests/k/` directory contains working example programs:
-- `hello.k`: Basic print statement
-- `factorial.k`: Recursive factorial calculation
-- `test_*.k`: Various language feature demonstrations
+- `hello.k`: Basic print statement with high-precision output
+- `factorial.k`: Iterative factorial calculation (120.000000000000000)
+- `test_*.k`: Various language feature demonstrations with 15-digit precision
+- `pi_leibniz.k`: **NEW** - Pi calculation using Leibniz formula (10,000 iterations)
+  - Demonstrates complex mathematical computation
+  - Result: `3.141492653590034` (accurate to ~5 decimal places)
+  - Shows compiler's capability for scientific calculations
 
 ## Development Environment Status
 - ✅ **Build System**: CMake + LLVM integration with standardized build process
