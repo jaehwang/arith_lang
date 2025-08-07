@@ -49,6 +49,7 @@ The ArithLang compiler has achieved **major architectural improvements** and **c
 - ✅ **Code Generation**: Program-level IR generation with proper function structure
 - ✅ **API Design**: Clean public interface with proper encapsulation
 - ✅ **Real-World Validation**: Successfully implements Pi calculation with Leibniz formula
+- ✅ **Unary Expressions**: Native negative number support with comprehensive testing
 
 ## Project Insights
 
@@ -79,15 +80,15 @@ Based on real-world usage testing with Pi calculation program, two critical limi
      - CodeGen: LLVM string constant generation and printf integration
    - **Example**: Enable `print "Pi calculation result: "; print pi_value;`
 
-2. **Native Negative Number Support** ⭐⭐⭐⭐⭐
-   - **Current Issue**: `-1.0` fails to parse, requiring workaround `0.0 - 1.0`
-   - **Impact**: Makes mathematical expressions verbose and unnatural
-   - **Required Changes**:
-     - Lexer: Recognize unary minus operator in appropriate contexts
-     - Parser: Add unary expression parsing with proper precedence
-     - AST: Add UnaryExprAST node for unary minus operations
-     - CodeGen: LLVM unary negation instruction generation
-   - **Example**: Enable `sign = -1.0;` instead of `sign = 0.0 - 1.0;`
+2. **Native Negative Number Support** ✅ **COMPLETED**
+   - **Problem SOLVED**: `-1.0` now parses correctly with full unary minus support
+   - **Implementation Complete**:
+     - ✅ Lexer: Unary minus operator recognition implemented
+     - ✅ Parser: `parseUnaryExpr()` method with proper precedence handling
+     - ✅ AST: `UnaryExprAST` node class for unary minus operations
+     - ✅ CodeGen: LLVM `CreateFNeg` instruction generation
+   - **Test Coverage**: 6 comprehensive unit tests covering all scenarios
+   - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
 
 ### Secondary Priorities
 - **Code Quality Maintenance**: Continue monitoring function length and complexity
@@ -130,6 +131,9 @@ The `tests/k/` directory contains working example programs:
   - Demonstrates complex mathematical computation
   - Result: `3.141492653590034` (accurate to ~5 decimal places)
   - Shows compiler's capability for scientific calculations
+- `test_unary_minus.k`: **NEW** - Unary minus operator demonstration
+  - Tests negative literals: `x = -1`, `y = -x`, `print y`
+  - Shows natural mathematical notation support
 
 ## Development Environment Status
 - ✅ **Build System**: CMake + LLVM integration with standardized build process

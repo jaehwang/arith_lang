@@ -52,6 +52,18 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr() {
     return std::make_unique<VariableExprAST>(idName);
 }
 
+std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
+    if (currentToken.type == TOK_MINUS) {
+        char op = '-';
+        getNextToken(); // consume the unary operator
+        auto operand = parsePrimary();
+        if (!operand) return nullptr;
+        return std::make_unique<UnaryExprAST>(op, std::move(operand));
+    }
+    
+    return parsePrimary();
+}
+
 std::unique_ptr<ExprAST> Parser::parsePrimary() {
     switch (currentToken.type) {
         case TOK_IDENTIFIER:
@@ -60,6 +72,8 @@ std::unique_ptr<ExprAST> Parser::parsePrimary() {
             return parseNumberExpr();
         case TOK_LPAREN:
             return parseParenExpr();
+        case TOK_MINUS:
+            return parseUnaryExpr();
         default:
             throw std::runtime_error("Unknown token when expecting an expression");
     }
@@ -75,7 +89,7 @@ std::unique_ptr<ExprAST> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<Exp
         int binOp = currentToken.type;
         getNextToken();
         
-        auto rhs = parsePrimary();
+        auto rhs = parseUnaryExpr();
         if (!rhs) return nullptr;
         
         int nextPrec = getTokenPrecedence();
@@ -89,7 +103,7 @@ std::unique_ptr<ExprAST> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<Exp
 }
 
 std::unique_ptr<ExprAST> Parser::parseAssignment() {
-    auto lhs = parsePrimary();
+    auto lhs = parseUnaryExpr();
     if (!lhs) return nullptr;
     
     // Check if this is an assignment

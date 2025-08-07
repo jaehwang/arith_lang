@@ -82,6 +82,18 @@ llvm::Value* VariableExprAST::codegen() {
     return codeGenInstance->getBuilder().CreateLoad(llvm::Type::getDoubleTy(codeGenInstance->getContext()), alloca, name);
 }
 
+llvm::Value* UnaryExprAST::codegen() {
+    llvm::Value* operandV = operand->codegen();
+    if (!operandV) return nullptr;
+    
+    switch (op) {
+        case '-':
+            return codeGenInstance->getBuilder().CreateFNeg(operandV, "negtmp");
+        default:
+            throw std::runtime_error("Invalid unary operator");
+    }
+}
+
 llvm::Value* BinaryExprAST::codegen() {
     llvm::Value* l = lhs->codegen();
     llvm::Value* r = rhs->codegen();

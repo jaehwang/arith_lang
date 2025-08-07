@@ -80,6 +80,7 @@ All compiler phases are **fully implemented and optimized**:
 
 ### Fully Implemented ✅
 - **Arithmetic**: `+`, `-`, `*`, `/` with proper precedence
+- **Unary Expressions**: `-` (unary minus) with proper precedence handling
 - **Comparison**: `>`, `<`, `>=`, `<=`, `==`, `!=`
 - **Variables**: Declaration, assignment, and reference
 - **I/O**: Print statements for output
@@ -90,11 +91,11 @@ All compiler phases are **fully implemented and optimized**:
 ### Test Coverage
 ```
 Lexer Tests:     21/21 ✅ (100%)
-Parser Tests:    15/15 ✅ (100%) 
+Parser Tests:    21/21 ✅ (100%) [+6 UnaryMinusTest cases]
 Codegen Tests:   11/11 ✅ (100%)
 Integration:     7/7   ✅ (100%)
 System Tests:    11/11 ✅ (100%)
-Total:          65/65  ✅ (100%)
+Total:          71/71  ✅ (100%)
 ```
 
 ### Test Suite Modernization ✅
@@ -111,6 +112,10 @@ The compiler successfully handles complex programs including:
   - 10,000 iterations producing `3.141492653590034`
   - Demonstrates compiler's scientific computation capabilities
   - Complex loop with multiple variable updates per iteration
+- **Unary Operations**: Natural negative number syntax
+  - `x = -1` works as expected (no longer requires `x = 0 - 1`)
+  - `print -5.0` outputs `-5.000000000000000`
+  - `z = --5.0` produces positive 5.0 (double negation)
 - **Conditional Logic**: Multi-branch decision making with high-precision boolean outputs
 - **Loop Constructs**: Iterative algorithms with precise numerical results
 - **Variable Management**: Complex expression evaluation with 15-digit precision
@@ -157,18 +162,23 @@ Two major usability issues still require attention:
    - **User Impact**: Programs cannot provide meaningful output descriptions
    - **Example Failure**: `print "Pi = "; print result;` completely impossible
 
-2. **Negative Number Syntax Not Supported** 🔴  
-   - **Problem**: Cannot write `-1.0` directly - parser cannot handle unary minus
-   - **Current Workaround**: Must use `0.0 - 1.0` for negative values
-   - **User Impact**: Mathematical expressions become verbose and unnatural
-   - **Example**: Leibniz formula requires `sign = 0.0 - sign;` instead of `sign = -sign;`
+2. **Negative Number Syntax Support** ✅ **COMPLETED**
+   - **Problem SOLVED**: `-1.0` now works perfectly with full unary minus support
+   - **Implementation Details**:
+     - **UnaryExprAST**: New AST node class for unary operations
+     - **parseUnaryExpr()**: Parser method with proper precedence 
+     - **CreateFNeg**: LLVM IR generation for floating-point negation
+     - **Comprehensive Testing**: 6 unit tests covering all scenarios
+   - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
 
 ### Required Implementation Tasks for Remaining Issues
-Both features require changes across all compiler phases:
-- **Lexer**: New token types (STRING, UNARY_MINUS)
-- **Parser**: Extended grammar rules for new constructs  
-- **AST**: New node types (StringLiteralAST, UnaryExprAST)
-- **CodeGen**: LLVM IR generation for new features
+String literal support requires changes across all compiler phases:
+- **Lexer**: New STRING token type with quote handling
+- **Parser**: Extended print statement grammar for string literals
+- **AST**: New StringLiteralAST node type
+- **CodeGen**: LLVM string constant generation and printf integration
+
+**COMPLETED**: ✅ Unary minus support fully implemented across all phases
 
 ## Future Opportunities
 

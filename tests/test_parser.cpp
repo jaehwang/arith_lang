@@ -230,6 +230,181 @@ TEST_F(ParserEdgeCaseTest, MaximumNestingDepth) {
     EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
+// Unary Minus Tests
+class UnaryMinusTest : public ::testing::Test {
+protected:
+    void SetUp() override {}
+    void TearDown() override {}
+};
+
+TEST_F(UnaryMinusTest, BasicUnaryMinus) {
+    std::string input = "print -5.0;";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is a PrintStmtAST
+    auto* printStmt = dynamic_cast<PrintStmtAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(printStmt, nullptr);
+    
+    // Check that the expression is a UnaryExprAST
+    auto* unaryExpr = dynamic_cast<UnaryExprAST*>(printStmt->getExpr());
+    ASSERT_NE(unaryExpr, nullptr);
+    EXPECT_EQ(unaryExpr->getOperator(), '-');
+    
+    // Check that the operand is a NumberExprAST
+    auto* numberExpr = dynamic_cast<NumberExprAST*>(unaryExpr->getOperand());
+    ASSERT_NE(numberExpr, nullptr);
+    EXPECT_DOUBLE_EQ(numberExpr->getValue(), 5.0);
+}
+
+TEST_F(UnaryMinusTest, UnaryMinusAssignment) {
+    std::string input = "x = -3.14;";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is an AssignmentExprAST
+    auto* assignExpr = dynamic_cast<AssignmentExprAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(assignExpr, nullptr);
+    EXPECT_EQ(assignExpr->getVarName(), "x");
+    
+    // Check that the value is a UnaryExprAST
+    auto* unaryExpr = dynamic_cast<UnaryExprAST*>(assignExpr->getValue());
+    ASSERT_NE(unaryExpr, nullptr);
+    EXPECT_EQ(unaryExpr->getOperator(), '-');
+}
+
+TEST_F(UnaryMinusTest, UnaryMinusVariable) {
+    std::string input = "y = -x;";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is an AssignmentExprAST
+    auto* assignExpr = dynamic_cast<AssignmentExprAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(assignExpr, nullptr);
+    
+    // Check that the value is a UnaryExprAST with a variable operand
+    auto* unaryExpr = dynamic_cast<UnaryExprAST*>(assignExpr->getValue());
+    ASSERT_NE(unaryExpr, nullptr);
+    EXPECT_EQ(unaryExpr->getOperator(), '-');
+    
+    // Check that the operand is a VariableExprAST
+    auto* varExpr = dynamic_cast<VariableExprAST*>(unaryExpr->getOperand());
+    ASSERT_NE(varExpr, nullptr);
+    EXPECT_EQ(varExpr->getName(), "x");
+}
+
+TEST_F(UnaryMinusTest, UnaryMinusParentheses) {
+    std::string input = "result = -(2.0 + 3.0);";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is an AssignmentExprAST
+    auto* assignExpr = dynamic_cast<AssignmentExprAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(assignExpr, nullptr);
+    
+    // Check that the value is a UnaryExprAST
+    auto* unaryExpr = dynamic_cast<UnaryExprAST*>(assignExpr->getValue());
+    ASSERT_NE(unaryExpr, nullptr);
+    EXPECT_EQ(unaryExpr->getOperator(), '-');
+    
+    // Check that the operand is a BinaryExprAST (2.0 + 3.0)
+    auto* binaryExpr = dynamic_cast<BinaryExprAST*>(unaryExpr->getOperand());
+    ASSERT_NE(binaryExpr, nullptr);
+    EXPECT_EQ(binaryExpr->getOperator(), '+');
+}
+
+TEST_F(UnaryMinusTest, DoubleUnaryMinus) {
+    std::string input = "z = --5.0;";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is an AssignmentExprAST
+    auto* assignExpr = dynamic_cast<AssignmentExprAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(assignExpr, nullptr);
+    
+    // Check that the value is a UnaryExprAST (outer minus)
+    auto* outerUnary = dynamic_cast<UnaryExprAST*>(assignExpr->getValue());
+    ASSERT_NE(outerUnary, nullptr);
+    EXPECT_EQ(outerUnary->getOperator(), '-');
+    
+    // Check that the operand is also a UnaryExprAST (inner minus)
+    auto* innerUnary = dynamic_cast<UnaryExprAST*>(outerUnary->getOperand());
+    ASSERT_NE(innerUnary, nullptr);
+    EXPECT_EQ(innerUnary->getOperator(), '-');
+    
+    // Check that the final operand is a NumberExprAST
+    auto* numberExpr = dynamic_cast<NumberExprAST*>(innerUnary->getOperand());
+    ASSERT_NE(numberExpr, nullptr);
+    EXPECT_DOUBLE_EQ(numberExpr->getValue(), 5.0);
+}
+
+TEST_F(UnaryMinusTest, UnaryMinusInBinaryExpression) {
+    std::string input = "result = -2.0 * 3.0;";
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    auto program = parser.parseProgram();
+    ASSERT_NE(program, nullptr);
+    
+    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
+    ASSERT_NE(programAST, nullptr);
+    EXPECT_EQ(programAST->getStatements().size(), 1);
+    
+    // Check that the statement is an AssignmentExprAST
+    auto* assignExpr = dynamic_cast<AssignmentExprAST*>(programAST->getStatements()[0].get());
+    ASSERT_NE(assignExpr, nullptr);
+    
+    // Check that the value is a BinaryExprAST
+    auto* binaryExpr = dynamic_cast<BinaryExprAST*>(assignExpr->getValue());
+    ASSERT_NE(binaryExpr, nullptr);
+    EXPECT_EQ(binaryExpr->getOperator(), '*');
+    
+    // Check that the left operand is a UnaryExprAST
+    auto* unaryExpr = dynamic_cast<UnaryExprAST*>(binaryExpr->getLHS());
+    ASSERT_NE(unaryExpr, nullptr);
+    EXPECT_EQ(unaryExpr->getOperator(), '-');
+    
+    // Check that the right operand is a NumberExprAST
+    auto* numberExpr = dynamic_cast<NumberExprAST*>(binaryExpr->getRHS());
+    ASSERT_NE(numberExpr, nullptr);
+    EXPECT_DOUBLE_EQ(numberExpr->getValue(), 3.0);
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

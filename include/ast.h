@@ -33,6 +33,17 @@ public:
     const std::string& getName() const { return name; }
 };
 
+class UnaryExprAST : public ExprAST {
+    char op;
+    std::unique_ptr<ExprAST> operand;
+public:
+    UnaryExprAST(char op, std::unique_ptr<ExprAST> operand)
+        : op(op), operand(std::move(operand)) {}
+    llvm::Value* codegen() override;
+    char getOperator() const { return op; }
+    ExprAST* getOperand() const { return operand.get(); }
+};
+
 class BinaryExprAST : public ExprAST {
     char op;
     std::unique_ptr<ExprAST> lhs, rhs;
