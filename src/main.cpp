@@ -26,8 +26,7 @@ void printUsage(const char* programName) {
     std::cout << "옵션:\n";
     std::cout << "  -o <파일>    LLVM IR을 지정된 파일에 저장\n\n";
     std::cout << "예제:\n";
-    std::cout << "  " << programName << " -o <output.ll> <input.k>\n";
-    std::cout << "  " << programName << " -o result.ll program.k\n\n";
+    std::cout << "  " << programName << " -o output.ll input.k\n";
     std::cout << "입력 파일은 .k 확장자를 사용합니다.\n";
 }
 
