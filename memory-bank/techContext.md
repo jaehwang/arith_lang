@@ -36,6 +36,9 @@ tests/            # Test suite
 ├── test_codegen.cpp    # Code generation tests
 ├── test_integration.cpp # End-to-end tests
 └── k/                  # Test input files
+
+rules/            # Project documentation standards
+└── commit_log.md # Standardized commit message template
 ```
 
 ### Build Artifacts
@@ -111,6 +114,11 @@ Follow this standardized testing sequence:
 ./test_integration
 ```
 
+## Development Standards
+
+### Commit Message Standards
+All commits must follow the standardized template defined in `rules/commit_log.md`.
+
 ## LLVM Integration Details
 
 ### LLVM Components Used
@@ -147,6 +155,7 @@ Follow this standardized testing sequence:
 4. Extend AST nodes
 5. Implement code generation
 6. Validate all tests pass
+7. Commit following `rules/commit_log.md` template
 
 ### Debugging
 - **LLVM IR Inspection**: Generated `.ll` files in `build/k/`
