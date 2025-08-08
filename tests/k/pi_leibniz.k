@@ -7,7 +7,7 @@ while (iterations < 10000) {
     term = sign / denominator;
     pi_over_4 = pi_over_4 + term;
     denominator = denominator + 2.0;
-    sign = 0.0 - sign;
+    sign = -1 * sign;
     iterations = iterations + 1;
 }
 
