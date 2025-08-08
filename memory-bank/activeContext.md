@@ -19,7 +19,7 @@ The ArithLang compiler has achieved **major architectural improvements** and **c
   - `parseProgram()` now the primary public interface
   - `parseStatement()` moved to private for internal use only
   - Eliminates direct statement-level access from external code
-- **Grammar Consistency**: Parser implementation now fully matches BNF specification in syntax.md
+- **Grammar Consistency**: Parser implementation now fully matches BNF specification in specs/syntax.md
   - Complete alignment between formal grammar and implementation
   - Proper program → statement* structure implemented
 
@@ -67,7 +67,7 @@ The ArithLang compiler has achieved **major architectural improvements** and **c
 4. **Comprehensive Testing**: All test levels adapted to new architecture without functionality loss
 
 ### Architecture Quality Metrics
-- **Grammar Consistency**: 100% alignment between syntax.md BNF and parser implementation
+- **Grammar Consistency**: 100% alignment between specs/syntax.md BNF and parser implementation
 - **Test Migration**: 54 tests successfully migrated to program-level architecture
 - **API Cleanliness**: Single public parsing entry point with proper encapsulation
 - **System Integration**: Complete end-to-end testing (11/11 integration tests passing)

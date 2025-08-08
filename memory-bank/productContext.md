@@ -63,8 +63,8 @@ The compiler has been successfully validated with practical mathematical computa
   - Compiler's real-world applicability beyond toy examples
 
 ## Language Specification
-- **Grammar Definition**: Complete BNF grammar specification available in `syntax.md`
-- **Print Statement Specification**: Comprehensive printf-like functionality detailed in `print.md`
+- **Grammar Definition**: Complete BNF grammar specification available in `specs/syntax.md`
+- **Print Statement Specification**: Comprehensive printf-like functionality detailed in `specs/print.md`
 - **Formal Syntax**: Defines all language constructs including:
   - Arithmetic expressions with proper operator precedence
   - Variable assignment and usage

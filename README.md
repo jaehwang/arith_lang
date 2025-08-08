@@ -23,8 +23,8 @@ LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는
 
 ## Syntax
 
-[Syntax](syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다.
-[Print Statement Specification](print.md) 문서에서 고급 printf-like 출력 기능의 상세한 명세를 확인할 수 있습니다.
+[Syntax](specs/syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다.
+[Print Statement Specification](specs/print.md) 문서에서 고급 printf-like 출력 기능의 상세한 명세를 확인할 수 있습니다.
 
 ### 지원되는 문법 요소
 
@@ -58,8 +58,9 @@ arith_lang/
 ├── CLAUDE.md               # Claude Code용 프로젝트 가이드라인
 ├── CMakeLists.txt          # CMake 빌드 설정
 ├── README.md               # 프로젝트 문서
-├── syntax.md               # 언어 문법 명세
-├── print.md                # Print 문 상세 명세 (printf-like 기능)
+├── specs/                   # 언어 명세 문서
+│   ├── syntax.md            # 언어 문법 명세
+│   └── print.md             # Print 문 상세 명세 (printf-like 기능)
 ├── run.sh                  # 빌드 및 실행 스크립트
 ├── test_runner.sh          # 통합 테스트 실행 스크립트
 ├── build/                  # CMake 빌드 디렉토리

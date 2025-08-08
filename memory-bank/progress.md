@@ -194,7 +194,7 @@ Both critical usability issues have been **successfully resolved**:
    - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
 
 ### Print Statement Specification 📋
-Complete printf-like functionality is documented in **`print.md`** including:
+Complete printf-like functionality is documented in **`specs/print.md`** including:
 - **Implementation Strategy**: Three-phase development approach
 - **Format Specifier Reference**: Complete table of all supported formats
 - **Newline Behavior Rules**: Precise specification of automatic newline insertion
