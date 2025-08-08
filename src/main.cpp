@@ -22,11 +22,13 @@ struct CompilerOptions {
 void printUsage(const char* programName) {
     std::cout << "ArithLang - LLVM 기반 산술 표현식 컴파일러\n\n";
     std::cout << "사용법:\n";
+    std::cout << "  " << programName << " <입력파일>\n";
     std::cout << "  " << programName << " -o <출력파일> <입력파일>\n\n";
     std::cout << "옵션:\n";
-    std::cout << "  -o <파일>    LLVM IR을 지정된 파일에 저장\n\n";
+    std::cout << "  -o <파일>    LLVM IR을 지정된 파일에 저장 (기본값: a.ll)\n\n";
     std::cout << "예제:\n";
-    std::cout << "  " << programName << " -o output.ll input.k\n";
+    std::cout << "  " << programName << " input.k              # a.ll로 출력\n";
+    std::cout << "  " << programName << " -o output.ll input.k # output.ll로 출력\n";
     std::cout << "입력 파일은 .k 확장자를 사용합니다.\n";
 }
 
@@ -65,14 +67,20 @@ std::string readFile(const std::string& filename) {
 }
 
 CompilerOptions parseCommandLine(int argc, char* argv[]) {
-    if (argc != 4 || std::string(argv[1]) != "-o") {
+    CompilerOptions options;
+    
+    if (argc == 2) {
+        // gcc와 같은 동작: -o 없으면 현재 디렉토리에 'a.ll' 생성
+        options.inputFile = argv[1];
+        options.outputFile = "a.ll";
+    } else if (argc == 4 && std::string(argv[1]) == "-o") {
+        // -o 옵션으로 출력 파일 지정
+        options.outputFile = argv[2];
+        options.inputFile = argv[3];
+    } else {
         printUsage(argv[0]);
         throw std::runtime_error("잘못된 명령행 인자");
     }
-    
-    CompilerOptions options;
-    options.outputFile = argv[2];
-    options.inputFile = argv[3];
     
     if (options.inputFile.length() < 2 || 
         options.inputFile.substr(options.inputFile.length() - 2) != ".k") {

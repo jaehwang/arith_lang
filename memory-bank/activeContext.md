@@ -1,11 +1,12 @@
 # Active Context: ArithLang Current State
 
 ## Current Focus
-The ArithLang compiler has achieved **major architectural improvements** and **critical usability enhancements**. Recent developments focus on **real-world program support** discovered through Pi calculation implementation:
+The ArithLang compiler has achieved **major architectural improvements** and **critical usability enhancements**. Most recent development focused on **CLI usability improvements** for better developer experience:
 
 - **Program-Level Architecture**: Complete transition from statement-by-statement to program-level compilation
 - **Private API Design**: parseStatement() moved to private, enforcing proper encapsulation
 - **High-Precision Output**: Fixed printf precision limitation for scientific calculations
+- **CLI Usability Enhancement**: gcc-style default output behavior implemented
 - **Real-World Validation**: Successful Pi calculation demonstrates practical compiler capabilities
 
 ## Recent Major Improvements
@@ -30,6 +31,17 @@ The ArithLang compiler has achieved **major architectural improvements** and **c
   - **Real-World Impact**: Pi calculation now displays `3.141492653590034` instead of `3.141593`
   - **Test Suite Updated**: All 11 expected values updated to 15-digit precision format
   - **Status**: All integration tests passing (11/11) with new precision requirements
+
+- **CLI Default Output Enhancement**: Implemented gcc-style default output behavior ✅ **NEW**
+  - **Problem Solved**: Previously required `-o` flag for all compilations
+  - **Solution Applied**: Modified `parseCommandLine()` to support optional `-o` flag with `a.ll` default
+  - **gcc Compatibility**: Matches gcc behavior of creating `a.out` (we create `a.ll`) in current directory
+  - **User Experience**: Simplified common usage from `./arithc -o output.ll file.k` to `./arithc file.k`
+  - **Backward Compatibility**: Existing `-o` flag usage remains fully supported
+  - **Usage Patterns**:
+    - `./arithc input.k` → creates `a.ll` in current directory
+    - `./arithc -o custom.ll input.k` → creates `custom.ll` as specified
+  - **Documentation Updated**: Help text now shows both usage patterns with clear examples
 
 ### Test Suite Modernization ✅
 - **Unit Test Updates**: Comprehensive migration to program-level testing
@@ -74,9 +86,9 @@ The ArithLang compiler has achieved **major architectural improvements** and **c
 
 ## Current Development Priorities
 
-### HIGHEST PRIORITY: Language Feature Enhancements 🚀 **COMPLETED**
+### HIGHEST PRIORITY: Developer Experience Enhancements 🚀 **COMPLETED**
 
-Both critical language limitations identified from real-world Pi calculation usage have been **successfully implemented**:
+All critical usability improvements have been **successfully implemented**:
 
 1. **String Literal Support in Print Statements** ✅ **COMPLETED**
    - **Problem SOLVED**: `print "Hello World";` now works perfectly
@@ -101,6 +113,16 @@ Both critical language limitations identified from real-world Pi calculation usa
      - ✅ CodeGen: LLVM `CreateFNeg` instruction generation
    - **Test Coverage**: 6 comprehensive unit tests covering all scenarios
    - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
+
+3. **CLI Default Output Support** ✅ **COMPLETED** 
+   - **Problem SOLVED**: No longer requires `-o` flag for basic compilation
+   - **gcc-Style Behavior**: Creates `a.ll` by default in current directory
+   - **Implementation Complete**:
+     - ✅ CLI Parser: Support for both `arithc file.k` and `arithc -o output.ll file.k`
+     - ✅ Help System: Updated usage documentation with examples
+     - ✅ Backward Compatibility: Existing scripts continue to work
+   - **Test Coverage**: Verified both usage patterns work correctly
+   - **Working Examples**: `./arithc hello.k` creates `a.ll` automatically
 
 ### Secondary Priorities
 - **Code Quality Maintenance**: Continue monitoring function length and complexity

@@ -74,6 +74,7 @@ All compiler phases are **fully implemented and optimized**:
 ### Development Experience Enhancements
 - **LLVM Integration** ✅: Fixed VSCode header recognition issues
 - **Build Process** ✅: Streamlined compilation and testing
+- **CLI Usability** ✅: gcc-style default output behavior (creates `a.ll` without `-o` flag)
 - **Documentation** ✅: Comprehensive memory bank system established
 
 ## Current Language Features
@@ -192,6 +193,17 @@ Both critical usability issues have been **successfully resolved**:
      - **CreateFNeg**: LLVM IR generation for floating-point negation
      - **Comprehensive Testing**: 6 unit tests covering all scenarios
    - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
+
+3. **CLI Default Output Enhancement** ✅ **COMPLETED** **NEW**
+   - **Problem SOLVED**: Simplified command-line usage with gcc-style behavior
+   - **Implementation Details**:
+     - **parseCommandLine()**: Enhanced to support optional `-o` flag
+     - **Default Behavior**: Creates `a.ll` in current directory when `-o` not specified
+     - **Help System**: Updated to show both usage patterns
+     - **gcc Compatibility**: Matches familiar gcc behavior (`gcc file.c` creates `a.out`)
+   - **Usage Examples**: 
+     - `./arithc input.k` creates `a.ll` automatically
+     - `./arithc -o custom.ll input.k` creates `custom.ll` as before
 
 ### Print Statement Specification 📋
 Complete printf-like functionality is documented in **`specs/print.md`** including:

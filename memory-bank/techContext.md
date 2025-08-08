@@ -78,6 +78,11 @@ cmake --build build
 - `test_codegen`: Code generation tests
 - `test_integration`: End-to-end tests
 
+### Compiler Usage
+- **Basic Usage**: `./arithc input.k` → creates `a.ll` in current directory
+- **Custom Output**: `./arithc -o output.ll input.k` → creates specified output file
+- **gcc Compatibility**: Follows familiar gcc-style default behavior
+
 ## Test Execution
 
 ### Complete Test Sequence
