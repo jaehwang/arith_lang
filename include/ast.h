@@ -33,6 +33,14 @@ public:
     const std::string& getName() const { return name; }
 };
 
+class StringLiteralAST : public ExprAST {
+    std::string value;
+public:
+    StringLiteralAST(const std::string& value) : value(value) {}
+    llvm::Value* codegen() override;
+    const std::string& getValue() const { return value; }
+};
+
 class UnaryExprAST : public ExprAST {
     char op;
     std::unique_ptr<ExprAST> operand;
@@ -68,11 +76,18 @@ public:
 };
 
 class PrintStmtAST : public ASTNode {
-    std::unique_ptr<ExprAST> expr;
+    std::unique_ptr<ExprAST> formatExpr;
+    std::vector<std::unique_ptr<ExprAST>> args;
 public:
-    PrintStmtAST(std::unique_ptr<ExprAST> expr) : expr(std::move(expr)) {}
+    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr) : formatExpr(std::move(formatExpr)) {}
+    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr, std::vector<std::unique_ptr<ExprAST>> args) 
+        : formatExpr(std::move(formatExpr)), args(std::move(args)) {}
     llvm::Value* codegen() override;
-    ExprAST* getExpr() const { return expr.get(); }
+    ExprAST* getFormatExpr() const { return formatExpr.get(); }
+    const std::vector<std::unique_ptr<ExprAST>>& getArgs() const { return args; }
+    
+    // Backward compatibility
+    ExprAST* getExpr() const { return formatExpr.get(); }
 };
 
 class IfStmtAST : public ASTNode {

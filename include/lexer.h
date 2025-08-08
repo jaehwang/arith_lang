@@ -10,6 +10,7 @@ enum TokenType {
     TOK_IF = -5,
     TOK_ELSE = -6,
     TOK_WHILE = -7,
+    TOK_STRING = -8,
     TOK_PLUS = '+',
     TOK_MINUS = '-',
     TOK_MULTIPLY = '*',
@@ -20,12 +21,13 @@ enum TokenType {
     TOK_ASSIGN = '=',
     TOK_LBRACE = '{',
     TOK_RBRACE = '}',
+    TOK_COMMA = ',',
     TOK_GT = '>',
     TOK_LT = '<',
-    TOK_GTE = -8,
-    TOK_LTE = -9,
-    TOK_EQ = -10,
-    TOK_NEQ = -11
+    TOK_GTE = -9,
+    TOK_LTE = -10,
+    TOK_EQ = -11,
+    TOK_NEQ = -12
 };
 
 struct Token {
@@ -48,6 +50,7 @@ private:
     void skipComment();
     double readNumber();
     std::string readIdentifier();
+    std::string readString();
     Token handleKeywordOrIdentifier(const std::string& identifier);
     Token handleOperator(char ch);
     

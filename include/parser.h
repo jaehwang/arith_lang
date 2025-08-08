@@ -23,6 +23,7 @@ private:
     std::unique_ptr<ExprAST> parseParenExpr();
     std::unique_ptr<ExprAST> parseNumberExpr();
     std::unique_ptr<ExprAST> parseIdentifierExpr();
+    std::unique_ptr<ExprAST> parseStringLiteral();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();
     

@@ -52,6 +52,12 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr() {
     return std::make_unique<VariableExprAST>(idName);
 }
 
+std::unique_ptr<ExprAST> Parser::parseStringLiteral() {
+    std::string strValue = currentToken.value;
+    getNextToken();
+    return std::make_unique<StringLiteralAST>(strValue);
+}
+
 std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
     if (currentToken.type == TOK_MINUS) {
         char op = '-';
@@ -70,6 +76,8 @@ std::unique_ptr<ExprAST> Parser::parsePrimary() {
             return parseIdentifierExpr();
         case TOK_NUMBER:
             return parseNumberExpr();
+        case TOK_STRING:
+            return parseStringLiteral();
         case TOK_LPAREN:
             return parseParenExpr();
         case TOK_MINUS:
@@ -155,15 +163,29 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
 
 std::unique_ptr<ASTNode> Parser::parsePrintStatement() {
     getNextToken(); // consume 'print'
-    auto expr = parseExpression();
-    if (!expr) return nullptr;
+    
+    auto firstExpr = parseExpression();
+    if (!firstExpr) return nullptr;
+    
+    // Check if there are additional arguments (comma-separated)
+    std::vector<std::unique_ptr<ExprAST>> args;
+    while (currentToken.type == TOK_COMMA) {
+        getNextToken(); // consume ','
+        auto arg = parseExpression();
+        if (!arg) return nullptr;
+        args.push_back(std::move(arg));
+    }
     
     if (currentToken.type != TOK_SEMICOLON) {
         throw std::runtime_error("Expected ';' after print statement");
     }
     getNextToken(); // consume ';'
     
-    return std::make_unique<PrintStmtAST>(std::move(expr));
+    if (args.empty()) {
+        return std::make_unique<PrintStmtAST>(std::move(firstExpr));
+    } else {
+        return std::make_unique<PrintStmtAST>(std::move(firstExpr), std::move(args));
+    }
 }
 
 std::unique_ptr<ASTNode> Parser::parseIfStatement() {

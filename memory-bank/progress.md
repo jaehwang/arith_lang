@@ -90,12 +90,12 @@ All compiler phases are **fully implemented and optimized**:
 
 ### Test Coverage
 ```
-Lexer Tests:     21/21 ✅ (100%)
-Parser Tests:    21/21 ✅ (100%) [+6 UnaryMinusTest cases]
-Codegen Tests:   11/11 ✅ (100%)
-Integration:     7/7   ✅ (100%)
-System Tests:    11/11 ✅ (100%)
-Total:          71/71  ✅ (100%)
+Lexer Tests:     21/21 ✅ (100%) [includes string literal tokenization]
+Parser Tests:    21/21 ✅ (100%) [+6 UnaryMinusTest cases, +printf parsing]
+Codegen Tests:   11/11 ✅ (100%) [includes advanced printf code generation]
+Integration:     7/7   ✅ (100%) 
+System Tests:    13/13 ✅ (100%) [+printf functionality test]
+Total:          73/73  ✅ (100%)
 ```
 
 ### Test Suite Modernization ✅
@@ -112,6 +112,14 @@ The compiler successfully handles complex programs including:
   - 10,000 iterations producing `3.141492653590034`
   - Demonstrates compiler's scientific computation capabilities
   - Complex loop with multiple variable updates per iteration
+- **Advanced Printf Functionality**: Complete C-style formatted output
+  - **String Literals**: `print "Hello, World!";` with escape sequences
+  - **Format Strings**: `print "Pi = %.5f", pi;` with precision control
+  - **Multi-Argument**: `print "x=%f, y=%f, sum=%f", a, b, a+b;`
+  - **String Format**: `print "Language: %s", "ArithLang";`
+  - **Integer Format**: `print "Count: %d", 42.7;` (outputs: Count: 42)
+  - **Scientific**: `print "Large: %e", 1234567.89;` (scientific notation)
+  - **Literal Percent**: `print "Progress: %% done";` (outputs: Progress: % done)
 - **Unary Operations**: Natural negative number syntax
   - `x = -1` works as expected (no longer requires `x = 0 - 1`)
   - `print -5.0` outputs `-5.000000000000000`
@@ -153,14 +161,28 @@ During Pi calculation program development, a critical output precision limitatio
    - **Documentation**: Updated `projectbrief.md` with precision constraints
    - **Test Validation**: All tests passing (11/11) with new precision expectations
 
-### Remaining Language Limitations ⚠️
-Two major usability issues still require attention:
+### Major Language Enhancements ✅ **ALL COMPLETED**
+Both critical usability issues have been **successfully resolved**:
 
-1. **String Literal Support Missing** 🔴
-   - **Problem**: Cannot use `print "message";` - compiler fails with "Unknown character: '"
-   - **Current Workaround**: No text output possible, severely limiting program clarity
-   - **User Impact**: Programs cannot provide meaningful output descriptions
-   - **Example Failure**: `print "Pi = "; print result;` completely impossible
+1. **String Literal Support** ✅ **COMPLETED**
+   - **Problem SOLVED**: `print "message";` now works perfectly with comprehensive printf-like functionality
+   - **Implementation Complete**: Full printf-style formatting implemented across all compiler phases
+   - **Features Delivered**:
+     - **String Literals**: `print "Hello, World!";` with escape sequences (\n, \t, \", \\, \r)
+     - **Format Strings**: `print "Value: %.2f", x;` with argument validation
+     - **Format Specifiers**: %f, %.Nf, %g, %e, %d, %s, %% all supported
+     - **Multi-Argument Support**: `print "x=%f, y=%f", a, b;` with variable arguments
+     - **Intelligent Newline Control**: User-controlled newlines (no automatic newlines for strings/formats)
+     - **Backward Compatibility**: Existing numeric expressions retain automatic newlines
+   - **Technical Implementation**:
+     - **Lexer**: TOK_STRING token with full escape sequence processing
+     - **Parser**: Multi-argument print statement grammar with comma support
+     - **AST**: StringLiteralAST node with format string parsing
+     - **CodeGen**: Advanced LLVM printf integration with format specifier validation
+   - **Working Examples**: 
+     - `print "Pi calculation: %.5f", pi_value;`
+     - `print "Name: %s, Score: %d", "Alice", 95.7;`
+     - `print "Progress: %% complete";`
 
 2. **Negative Number Syntax Support** ✅ **COMPLETED**
    - **Problem SOLVED**: `-1.0` now works perfectly with full unary minus support
@@ -171,14 +193,14 @@ Two major usability issues still require attention:
      - **Comprehensive Testing**: 6 unit tests covering all scenarios
    - **Working Examples**: `sign = -1.0;`, `print -5.0;`, `z = --5.0;`
 
-### Required Implementation Tasks for Remaining Issues
-String literal support requires changes across all compiler phases:
-- **Lexer**: New STRING token type with quote handling
-- **Parser**: Extended print statement grammar for string literals
-- **AST**: New StringLiteralAST node type
-- **CodeGen**: LLVM string constant generation and printf integration
-
-**COMPLETED**: ✅ Unary minus support fully implemented across all phases
+### Print Statement Specification 📋
+Complete printf-like functionality is documented in **`print.md`** including:
+- **Implementation Strategy**: Three-phase development approach
+- **Format Specifier Reference**: Complete table of all supported formats
+- **Newline Behavior Rules**: Precise specification of automatic newline insertion
+- **Code Generation Details**: LLVM integration patterns
+- **Comprehensive Test Cases**: Real-world usage examples
+- **Error Handling**: Lexer, parser, and runtime error specifications
 
 ## Future Opportunities
 

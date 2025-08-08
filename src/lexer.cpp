@@ -52,6 +52,54 @@ std::string Lexer::readIdentifier() {
     return identifier;
 }
 
+std::string Lexer::readString() {
+    std::string str;
+    advance(); // consume opening quote
+    
+    while (currentChar != '\0' && currentChar != '"') {
+        if (currentChar == '\\') {
+            advance(); // consume backslash
+            if (currentChar == '\0') {
+                throw std::runtime_error("Unterminated string literal");
+            }
+            
+            // Handle escape sequences
+            switch (currentChar) {
+                case 'n':
+                    str += '\n';
+                    break;
+                case 't':
+                    str += '\t';
+                    break;
+                case 'r':
+                    str += '\r';
+                    break;
+                case '\\':
+                    str += '\\';
+                    break;
+                case '"':
+                    str += '"';
+                    break;
+                default:
+                    // For now, treat unknown escape sequences as literal
+                    str += '\\';
+                    str += currentChar;
+                    break;
+            }
+        } else {
+            str += currentChar;
+        }
+        advance();
+    }
+    
+    if (currentChar != '"') {
+        throw std::runtime_error("Unterminated string literal");
+    }
+    
+    advance(); // consume closing quote
+    return str;
+}
+
 Token Lexer::handleKeywordOrIdentifier(const std::string& identifier) {
     if (identifier == "print") {
         return Token(TOK_PRINT, identifier);
@@ -71,7 +119,7 @@ Token Lexer::handleOperator(char ch) {
     switch (ch) {
         case '+': case '-': case '*': case '/':
         case '(': case ')': case '{': case '}':
-        case ';':
+        case ';': case ',':
             return Token(static_cast<TokenType>(ch), std::string(1, ch));
         case '=':
             if (currentChar == '=') {
@@ -127,6 +175,11 @@ Token Lexer::getNextToken() {
     if (std::isalpha(currentChar) || currentChar == '_') {
         std::string identifier = readIdentifier();
         return handleKeywordOrIdentifier(identifier);
+    }
+    
+    if (currentChar == '"') {
+        std::string str = readString();
+        return Token(TOK_STRING, str);
     }
     
     return handleOperator(currentChar);

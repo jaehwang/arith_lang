@@ -27,6 +27,8 @@ ArithLang serves as an educational bridge, demonstrating how a programming langu
 
 ### Simplicity First
 - Write mathematical expressions naturally: `x = 5 + 3 * 2`
+- Use familiar C-style printf formatting: `print "Value: %.2f", x;`
+- Output string literals and formatted text: `print "Hello, World!";`
 - See immediate results: both execution and generated IR
 - Clear error messages when syntax is wrong
 
@@ -62,11 +64,12 @@ The compiler has been successfully validated with practical mathematical computa
 
 ## Language Specification
 - **Grammar Definition**: Complete BNF grammar specification available in `syntax.md`
+- **Print Statement Specification**: Comprehensive printf-like functionality detailed in `print.md`
 - **Formal Syntax**: Defines all language constructs including:
   - Arithmetic expressions with proper operator precedence
   - Variable assignment and usage
   - Control flow (if/else, while loops)
-  - Print statements for output
+  - Advanced print statements with string literals and format specifiers
   - Block statements with proper scoping
 - **Implementation Reference**: Parser implementation follows the grammar rules exactly
 

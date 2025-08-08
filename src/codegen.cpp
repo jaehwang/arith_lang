@@ -82,6 +82,10 @@ llvm::Value* VariableExprAST::codegen() {
     return codeGenInstance->getBuilder().CreateLoad(llvm::Type::getDoubleTy(codeGenInstance->getContext()), alloca, name);
 }
 
+llvm::Value* StringLiteralAST::codegen() {
+    return codeGenInstance->getBuilder().CreateGlobalString(value, "str");
+}
+
 llvm::Value* UnaryExprAST::codegen() {
     llvm::Value* operandV = operand->codegen();
     if (!operandV) return nullptr;
@@ -151,18 +155,134 @@ llvm::Value* AssignmentExprAST::codegen() {
 }
 
 llvm::Value* PrintStmtAST::codegen() {
-    llvm::Value* val = expr->codegen();
-    if (!val) return nullptr;
-    
-    // Create format string "%.15f\n" for high precision output
-    llvm::Constant* formatStr = codeGenInstance->getBuilder().CreateGlobalString("%.15f\n");
-    
-    // Get printf function
     llvm::Function* printfFunc = codeGenInstance->getPrintfDeclaration();
     
-    // Call printf with format string and value
-    std::vector<llvm::Value*> args = {formatStr, val};
-    return codeGenInstance->getBuilder().CreateCall(printfFunc, args, "printfcall");
+    // Generate code for the format expression
+    llvm::Value* formatVal = formatExpr->codegen();
+    if (!formatVal) return nullptr;
+    
+    // Check if we have a format string with arguments
+    StringLiteralAST* formatString = dynamic_cast<StringLiteralAST*>(formatExpr.get());
+    
+    if (formatString && !args.empty()) {
+        // This is a format string with arguments - parse the format string
+        std::string formatStr = formatString->getValue();
+        std::vector<llvm::Value*> printfArgs;
+        
+        // Start with the format string itself
+        printfArgs.push_back(formatVal);
+        
+        // Process each argument
+        size_t argIndex = 0;
+        std::string processedFormat;
+        
+        for (size_t i = 0; i < formatStr.length(); i++) {
+            if (formatStr[i] == '%' && i + 1 < formatStr.length()) {
+                if (formatStr[i + 1] == '%') {
+                    // Literal % - just add both characters
+                    processedFormat += "%%";
+                    i++; // skip next character
+                } else if (formatStr[i + 1] == 'f' || 
+                          formatStr[i + 1] == 'g' || 
+                          formatStr[i + 1] == 'e' || 
+                          formatStr[i + 1] == 'd' ||
+                          formatStr[i + 1] == 's') {
+                    // Simple format specifier
+                    if (argIndex < args.size()) {
+                        llvm::Value* arg = args[argIndex]->codegen();
+                        if (!arg) return nullptr;
+                        
+                        // Handle type conversions
+                        if (formatStr[i + 1] == 'd') {
+                            // Convert double to int
+                            arg = codeGenInstance->getBuilder().CreateFPToSI(
+                                arg, llvm::Type::getInt32Ty(codeGenInstance->getContext()), "dtoi");
+                            processedFormat += "%d";
+                        } else if (formatStr[i + 1] == 's') {
+                            // String argument - check if it's a string literal
+                            StringLiteralAST* stringArg = dynamic_cast<StringLiteralAST*>(args[argIndex].get());
+                            if (!stringArg) {
+                                throw std::runtime_error("%s format specifier requires string literal argument");
+                            }
+                            processedFormat += "%s";
+                        } else {
+                            // Floating point formats (f, g, e)
+                            processedFormat += '%';
+                            processedFormat += formatStr[i + 1];
+                        }
+                        
+                        printfArgs.push_back(arg);
+                        argIndex++;
+                    } else {
+                        throw std::runtime_error("Not enough arguments for format string");
+                    }
+                    i++; // skip format character
+                } else if (formatStr[i + 1] == '.' && i + 2 < formatStr.length() && 
+                          std::isdigit(formatStr[i + 2])) {
+                    // Handle precision specifiers like %.2f
+                    size_t j = i + 2;
+                    while (j < formatStr.length() && std::isdigit(formatStr[j])) j++;
+                    
+                    if (j < formatStr.length() && (formatStr[j] == 'f' || formatStr[j] == 'g' || formatStr[j] == 'e')) {
+                        if (argIndex < args.size()) {
+                            llvm::Value* arg = args[argIndex]->codegen();
+                            if (!arg) return nullptr;
+                            
+                            // Copy the entire format specifier
+                            processedFormat += formatStr.substr(i, j - i + 1);
+                            printfArgs.push_back(arg);
+                            argIndex++;
+                        } else {
+                            throw std::runtime_error("Not enough arguments for format string");
+                        }
+                        i = j; // skip to after format character
+                    } else {
+                        processedFormat += formatStr[i];
+                    }
+                } else {
+                    processedFormat += formatStr[i];
+                }
+            } else {
+                processedFormat += formatStr[i];
+            }
+        }
+        
+        if (argIndex < args.size()) {
+            throw std::runtime_error("Too many arguments for format string");
+        }
+        
+        // Create the processed format string and call printf (no automatic newline)
+        llvm::Constant* finalFormatStr = codeGenInstance->getBuilder().CreateGlobalString(processedFormat);
+        printfArgs[0] = finalFormatStr; // Replace the original format string
+        
+        return codeGenInstance->getBuilder().CreateCall(printfFunc, printfArgs, "printfcall");
+        
+    } else if (formatString) {
+        // String literal without arguments - process %% and output with %s (no automatic newline)
+        std::string str = formatString->getValue();
+        
+        // Process %% -> % in string literals
+        std::string processedStr;
+        for (size_t i = 0; i < str.length(); i++) {
+            if (str[i] == '%' && i + 1 < str.length() && str[i + 1] == '%') {
+                processedStr += '%';
+                i++; // skip next %
+            } else {
+                processedStr += str[i];
+            }
+        }
+        
+        // Create processed string and use %s format
+        llvm::Constant* processedStringVal = codeGenInstance->getBuilder().CreateGlobalString(processedStr, "str");
+        llvm::Constant* formatStr = codeGenInstance->getBuilder().CreateGlobalString("%s");
+        std::vector<llvm::Value*> printfArgs = {formatStr, processedStringVal};
+        return codeGenInstance->getBuilder().CreateCall(printfFunc, printfArgs, "printfcall");
+    } else {
+        // Numeric expression - use high precision format
+        llvm::Constant* formatStr = codeGenInstance->getBuilder().CreateGlobalString("%.15f\n");
+        std::vector<llvm::Value*> printfArgs = {formatStr, formatVal};
+        return codeGenInstance->getBuilder().CreateCall(printfFunc, printfArgs, "printfcall");
+    }
 }
 
 llvm::Value* IfStmtAST::codegen() {

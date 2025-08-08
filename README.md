@@ -7,9 +7,14 @@ LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는
 - 기본 산술 연산: +, -, *, /
 - 비교 연산: >, <, >=, <=, ==, !=
 - 괄호를 이용한 연산 우선순위 제어
-- 부동소수점 숫자 지원
+- 부동소수점 숫자 지원 (15자리 고정밀도)
 - 변수 할당 및 사용 (x = 1)
-- Print 문 지원 (print x)
+- **고급 Print 문 지원**:
+  - 문자열 리터럴: `print "Hello, World!";`
+  - C-style 포맷 문자열: `print "Value: %.2f", x;`
+  - 다중 인수: `print "x=%f, y=%f", a, b;`
+  - 이스케이프 시퀀스: `\n`, `\t`, `\"`, `\\`
+  - 포맷 지정자: `%f`, `%.Nf`, `%g`, `%e`, `%d`, `%s`, `%%`
 - 조건문 지원 (if-else)
 - 반복문 지원 (while)
 - 라인 주석 지원 (`// comment`)
@@ -19,13 +24,17 @@ LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는
 ## Syntax
 
 [Syntax](syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다.
+[Print Statement Specification](print.md) 문서에서 고급 printf-like 출력 기능의 상세한 명세를 확인할 수 있습니다.
 
 ### 지원되는 문법 요소
 
 - **산술 연산**: `+`, `-`, `*`, `/` (우선순위 지원)
 - **비교 연산**: `>`, `<`, `>=`, `<=`, `==`, `!=`
 - **변수**: 할당 및 참조 (`x = 42`)
-- **출력**: `print` 문 (`print x;`)
+- **출력**: 고급 `print` 문 
+  - 기본: `print x;` (15자리 정밀도, 자동 개행)
+  - 문자열: `print "Hello";` (개행 없음)
+  - 포맷: `print "Value: %.2f", x;` (개행 없음)
 - **주석**: 라인 주석 (`// comment text`)
 - **조건문**: `if-else` 구문
   ```
@@ -50,6 +59,7 @@ arith_lang/
 ├── CMakeLists.txt          # CMake 빌드 설정
 ├── README.md               # 프로젝트 문서
 ├── syntax.md               # 언어 문법 명세
+├── print.md                # Print 문 상세 명세 (printf-like 기능)
 ├── run.sh                  # 빌드 및 실행 스크립트
 ├── test_runner.sh          # 통합 테스트 실행 스크립트
 ├── build/                  # CMake 빌드 디렉토리
@@ -272,7 +282,45 @@ $ ./arithc -o factorial.ll factorial.k
 LLVM IR이 성공적으로 생성되었습니다: factorial.ll
 
 $ lli factorial.ll
-120.000000
+120.000000000000000
+```
+
+### 고급 Printf 기능
+```bash
+# printf_demo.k 파일 생성
+cat > printf_demo.k << 'EOF'
+// 문자열 리터럴
+print "Hello, ArithLang!";
+print "This line has\na newline";
+
+// 포맷 문자열
+pi = 3.14159265358979;
+print "Pi = %.3f\n", pi;
+print "Scientific: %e\n", pi;
+
+// 다중 인수
+x = 10.5;
+y = 20.3;
+print "x=%f, y=%f, sum=%.1f\n", x, y, x + y;
+
+// 문자열 포맷
+print "Language: %s\n", "ArithLang";
+
+// 리터럴 퍼센트
+print "Progress: %% complete\n";
+EOF
+
+# 컴파일 및 실행
+$ ./arithc -o printf_demo.ll printf_demo.k
+LLVM IR이 성공적으로 생성되었습니다: printf_demo.ll
+
+$ lli printf_demo.ll
+Hello, ArithLang!This line has
+a newlinePi = 3.142
+Scientific: 3.141593e+00
+x=10.500000, y=20.300000, sum=30.8
+Language: ArithLang
+Progress: % complete
 ```
 
 ## IR 실행 방법
