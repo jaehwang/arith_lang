@@ -104,7 +104,7 @@ TEST_F(ParserEdgeCaseTest, OnlyCommentParsing) {
 }
 
 TEST_F(ParserEdgeCaseTest, MinimalAssignment) {
-    std::string input = "x=1";
+    std::string input = "x=1;";  // Add semicolon
     Lexer lexer(input);
     Parser parser(lexer);
     
@@ -130,7 +130,7 @@ TEST_F(ParserEdgeCaseTest, MinimalPrint) {
 }
 
 TEST_F(ParserEdgeCaseTest, NestedParentheses) {
-    std::string input = "((((1))))";
+    std::string input = "((((1))));";  // Add semicolon
     Lexer lexer(input);
     Parser parser(lexer);
     
@@ -182,18 +182,35 @@ TEST_F(ParserEdgeCaseTest, EmptyBlock) {
 }
 
 TEST_F(ParserEdgeCaseTest, MissingSemicolon) {
-    std::string input = "x = 1 y = 2";
+    std::string input = "x = 1 y = x";  // Change to the exact case mentioned
     Lexer lexer(input);
     Parser parser(lexer);
     
-    // Parse entire program - should handle missing semicolon gracefully
-    auto program = parser.parseProgram();
-    EXPECT_NE(program, nullptr);
+    // Missing semicolon should cause parsing to throw an exception
+    EXPECT_THROW({
+        auto program = parser.parseProgram();
+    }, std::runtime_error);
+}
+
+// Additional syntax error tests
+TEST_F(ParserEdgeCaseTest, MissingSemicolon_MultipleStatements) {
+    std::string input = "x = 1\ny = 2\nz = 3";
+    Lexer lexer(input);
+    Parser parser(lexer);
     
-    // Cast to ProgramAST to check statements
-    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
-    ASSERT_NE(programAST, nullptr);
-    EXPECT_GE(programAST->getStatements().size(), 1); // Should parse at least one statement
+    EXPECT_THROW({
+        auto program = parser.parseProgram();
+    }, std::runtime_error);
+}
+
+TEST_F(ParserEdgeCaseTest, MissingSemicolon_LastStatement) {
+    std::string input = "x = 1; y = 2";  // Last statement missing semicolon
+    Lexer lexer(input);
+    Parser parser(lexer);
+    
+    EXPECT_THROW({
+        auto program = parser.parseProgram();
+    }, std::runtime_error);
 }
 
 TEST_F(ParserEdgeCaseTest, ChainedComparisons) {

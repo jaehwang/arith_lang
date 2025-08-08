@@ -151,10 +151,11 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
             auto expr = parseExpression();
             if (!expr) return nullptr;
             
-            // Consume semicolon if present
-            if (currentToken.type == TOK_SEMICOLON) {
-                getNextToken();
+            // Semicolon is required for expression statements
+            if (currentToken.type != TOK_SEMICOLON) {
+                throw std::runtime_error("Expected ';' after expression statement");
             }
+            getNextToken(); // consume ';'
             
             return expr;
         }
@@ -254,6 +255,8 @@ std::unique_ptr<ASTNode> Parser::parseBlock() {
         auto stmt = parseStatement();
         if (stmt) {
             statements.push_back(std::move(stmt));
+        } else {
+            throw std::runtime_error("Failed to parse statement in block");
         }
     }
     
@@ -269,11 +272,17 @@ std::unique_ptr<ASTNode> Parser::parseProgram() {
     std::vector<std::unique_ptr<ASTNode>> statements;
     
     while (currentToken.type != TOK_EOF) {
-        auto stmt = parseStatement();
-        if (stmt) {
-            statements.push_back(std::move(stmt));
-        } else {
-            break;
+        try {
+            auto stmt = parseStatement();
+            if (stmt) {
+                statements.push_back(std::move(stmt));
+            } else {
+                // Statement parsing failed - this should not happen with proper error handling
+                throw std::runtime_error("Failed to parse statement");
+            }
+        } catch (const std::runtime_error& e) {
+            // If any statement fails to parse, the entire program is invalid
+            throw std::runtime_error("Parse error: " + std::string(e.what()));
         }
     }
     

@@ -47,6 +47,36 @@ Token handleOperator() { /* focused logic */ }
 - **Program-level parsing**: `parseProgram()` as primary public interface
 - **Private implementation**: `parseStatement()` encapsulated for internal use
 - **Grammar compliance**: Perfect alignment with BNF specification in syntax.md
+- **Strict syntax validation**: Required semicolons with comprehensive error handling
+
+**Recent Critical Improvements**:
+```cpp
+// Before: Optional semicolon handling (BUG)
+if (currentToken.type == TOK_SEMICOLON) {
+    getNextToken();  // Optional semicolon consumption
+}
+
+// After: Required semicolon validation (FIXED)
+if (currentToken.type != TOK_SEMICOLON) {
+    throw std::runtime_error("Expected ';' after expression statement");
+}
+getNextToken(); // Required semicolon consumption
+```
+
+**Error Handling Enhancement**:
+```cpp
+// Enhanced parseProgram() with strict validation
+try {
+    auto stmt = parseStatement();
+    if (stmt) {
+        statements.push_back(std::move(stmt));
+    } else {
+        throw std::runtime_error("Failed to parse statement");
+    }
+} catch (const std::runtime_error& e) {
+    throw std::runtime_error("Parse error: " + std::string(e.what()));
+}
+```
 
 **Grammar Structure**:
 ```
