@@ -146,6 +146,68 @@ All commits must follow the standardized template defined in `rules/commit_log.m
 - **File-based**: Test programs in `tests/k/` directory
 - **Output Validation**: Compare expected vs. actual results
 
+## Unit Test Creation Rules
+
+### Comprehensive Test Coverage Requirements
+모든 새로운 기능과 컴포넌트에 대해 **정상 입력과 비정상 입력 모두**를 고려한 테스트 케이스를 작성해야 합니다.
+
+### Positive Test Cases (정상 케이스)
+각 기능에 대해 다음 정상 시나리오를 테스트:
+- **기본 기능**: 표준적인 사용 패턴과 예상되는 올바른 입력
+- **경계 조건**: 유효한 범위의 최소값/최대값 (예: 빈 프로그램, 단일 문장)
+- **복합 시나리오**: 여러 기능이 조합된 복잡한 올바른 입력
+- **특수 케이스**: Edge case이지만 유효한 입력 (예: 중첩된 괄호, 긴 변수명)
+
+### Negative Test Cases (비정상 케이스)
+각 기능에 대해 다음 오류 시나리오를 **반드시** 테스트:
+- **구문 오류**: 잘못된 문법, 누락된 구문 요소 (예: 세미콜론, 괄호)
+- **의미적 오류**: 문법적으로는 올바르나 의미적으로 잘못된 입력
+- **타입 오류**: 지원하지 않는 데이터 타입이나 형변환 오류
+- **범위 오류**: 허용 범위를 벗어난 입력값
+- **빈 입력**: null, empty string 등의 빈 입력 처리
+
+### Test Structure Pattern
+```cpp
+// Google Test 기반 테스트 구조
+class ComponentTest : public ::testing::Test {
+protected:
+    void SetUp() override { /* 테스트 환경 초기화 */ }
+    void TearDown() override { /* 정리 작업 */ }
+};
+
+// 정상 케이스 테스트
+TEST_F(ComponentTest, ValidInput_BasicCase) {
+    // Given: 올바른 입력 준비
+    // When: 기능 실행  
+    // Then: 예상 결과 검증
+    EXPECT_EQ(expected, actual);
+}
+
+// 비정상 케이스 테스트
+TEST_F(ComponentTest, InvalidInput_ThrowsException) {
+    // Given: 잘못된 입력 준비
+    // When & Then: 예외 발생 검증
+    EXPECT_THROW(function_call(invalid_input), std::runtime_error);
+}
+```
+
+### Error Testing Guidelines
+- **EXPECT_THROW**: 예외 발생 여부와 예외 타입 검증
+- **Error Message Validation**: 예외 메시지의 정확성과 유용성 검증
+- **Error Recovery**: 오류 후 시스템 상태 일관성 검증
+- **Multiple Errors**: 한 번에 여러 오류가 발생하는 경우 처리 검증
+
+### Test Organization
+- **Separate Test Classes**: 정상 케이스와 비정상 케이스를 별도 테스트 클래스로 분리 고려
+- **Parametrized Tests**: 동일한 로직의 다양한 입력에 대해 `TEST_P` 사용
+- **Test Naming**: `ComponentTest_Scenario_ExpectedResult` 패턴 사용
+- **Test Documentation**: 복잡한 테스트 케이스에 대한 주석과 문서화
+
+### Regression Prevention
+- **Bug-Driven Tests**: 발견된 버그마다 해당 시나리오의 테스트 케이스 추가
+- **Syntax Error Coverage**: 파서의 모든 구문 오류 경로에 대한 테스트
+- **Edge Case Documentation**: 특이한 케이스와 그 처리 방법 문서화
+
 ## Development Workflow
 
 ### Adding Features
