@@ -59,6 +59,13 @@ set(CODEGEN_TEST_SOURCES
     tests/test_codegen.cpp
 )
 
+set(PARSER_NEGATIVE_TEST_SOURCES
+    src/lexer.cpp
+    src/parser.cpp
+    src/codegen.cpp
+    tests/test_parser_negative.cpp
+)
+
 add_executable(arithc ${SOURCES})
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
@@ -77,8 +84,12 @@ target_link_libraries(test_integration ${llvm_libs} gtest_main)
 add_executable(test_codegen ${CODEGEN_TEST_SOURCES})
 target_link_libraries(test_codegen ${llvm_libs} gtest_main)
 
+add_executable(test_parser_negative ${PARSER_NEGATIVE_TEST_SOURCES})
+target_link_libraries(test_parser_negative ${llvm_libs} gtest_main gmock_main)
+
 enable_testing()
 add_test(NAME LexerTests COMMAND test_lexer)
 add_test(NAME ParserTests COMMAND test_parser)
+add_test(NAME ParserNegativeTests COMMAND test_parser_negative)
 add_test(NAME CodeGenTests COMMAND test_codegen)
 add_test(NAME IntegrationTests COMMAND test_integration)

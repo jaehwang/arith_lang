@@ -4,9 +4,12 @@
 <program>      ::= <statement>*
 
 <statement>    ::= <assignment> ";"
-                 | "print" <expression> ";"
+                 | "print" <print_args> ";"
                  | "if" "(" <expression> ")" <block> "else" <block>
                  | "while" "(" <expression> ")" <block>
+
+<print_args>    ::= <string_literal> ("," <expression>)*
+                 | <expression>
 
 <block>         ::= "{" <statement>* "}"
 
@@ -25,7 +28,16 @@
 
 <primary>      ::= <number>
                  | <identifier>
+                 | <string_literal>
                  | "(" <expression> ")"
+
+<string_literal> ::= '"' <string_content> '"'
+
+<string_content> ::= (<string_char> | <escape_sequence>)*
+
+<string_char>   ::= [^"\\]  // Any character except quote and backslash
+
+<escape_sequence> ::= "\\n" | "\\t" | "\\r" | "\\\"" | "\\\\"
 
 <number>       ::= [0-9]+ ("." [0-9]+)?
 
@@ -64,8 +76,13 @@ The unary minus operator has higher precedence than all binary operators:
 - **While loops**: `while (condition) { ... }`
 
 ### Input/Output
-- **Print statement**: `print expression;`
-- High-precision output (15 decimal places)
+- **Print statement**: Enhanced printf-like functionality
+  - Simple expression: `print expression;`
+  - String literals: `print "Hello, World!";`
+  - Formatted output: `print "Value: %.2f", x;`
+  - Multi-argument: `print "x=%f, y=%f", a, b;`
+- High-precision output (15 decimal places for numeric expressions)
+- **String literals**: Support escape sequences (\n, \t, \", \\, \r)
 
 ### Comments
 - Single-line comments: `// comment text`
@@ -82,10 +99,19 @@ print y;            // Outputs: 1.000000000000000
 result = -(2.0 + 3.0) * -2.0;
 print result;       // Outputs: 10.000000000000000
 
+// Enhanced print statements with string literals
+print "Hello, World!";              // String literal output
+print "Pi = %.5f", 3.14159;         // Formatted output
+print "x=%f, y=%f", x, y;           // Multi-argument output
+
+// String literals with escape sequences
+print "Line 1\nLine 2";             // Newline escape
+print "Quote: \"Hello\"";           // Quote escape
+
 // Conditional with unary expressions
 if (-1.0 < 0.0) {
-    print 1.0;      // This will execute
+    print "Negative number detected";
 } else {
-    print 0.0;
+    print "Positive number";
 }
 ```

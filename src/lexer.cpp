@@ -32,10 +32,29 @@ void Lexer::skipComment() {
 
 double Lexer::readNumber() {
     std::string numStr;
+    bool hasDot = false;
     
+    // Read digits and at most one decimal point
     while (currentChar != '\0' && (std::isdigit(currentChar) || currentChar == '.')) {
+        if (currentChar == '.') {
+            if (hasDot) {
+                // Multiple decimal points - invalid number
+                throw std::runtime_error("Invalid number format: multiple decimal points");
+            }
+            hasDot = true;
+        }
         numStr += currentChar;
         advance();
+    }
+    
+    // Check for invalid formats like ending with dot
+    if (numStr.empty() || numStr.back() == '.') {
+        throw std::runtime_error("Invalid number format: number cannot end with decimal point");
+    }
+    
+    // Check for starting with dot
+    if (numStr.front() == '.') {
+        throw std::runtime_error("Invalid number format: number cannot start with decimal point");
     }
     
     return std::stod(numStr);

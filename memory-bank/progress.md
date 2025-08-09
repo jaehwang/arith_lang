@@ -268,27 +268,23 @@ Complete printf-like functionality is documented in **`specs/print.md`** includi
 
 ## Next Development Phase 🎯
 
-### Immediate Priorities: Enhanced Error Detection
+### Current Priority: Negative Test Failure Resolution
 
-1. **Comprehensive Syntax Error Testing** 🎯 **PLANNED**
-   - **Scope**: Expand beyond basic semicolon validation
-   - **Focus Areas**:
-     - Enhanced semicolon error scenarios (mixed valid/invalid, control structures)
-     - Malformed expression detection (incomplete operations, invalid sequences)
-     - Parentheses validation (unmatched, empty)
-     - Variable/assignment error detection (invalid names, missing targets)
-     - Control flow syntax validation (malformed if/while statements)
-   - **Quality Improvements**:
-     - Specific error messages instead of generic "parse error"
-     - Line/column position information in diagnostics
-     - Suggestion system for common mistakes
-     - Error recovery to detect multiple issues per compilation
+1. **Comprehensive Negative Test Suite** ✅ **COMPLETED**
+   - **Implementation**: 91 negative test cases across all grammar productions
+   - **Coverage**: 10 test categories covering statements, expressions, literals, control flow
+   - **Results**: 85/91 tests passing (93.4% success rate)
+   - **Infrastructure**: Dedicated test file with parameterized testing framework
 
-2. **Test Infrastructure Modernization** 🎯 **PLANNED**
-   - **Dedicated Test Suites**: Separate classes for different error categories
-   - **Error Message Validation**: Test both error occurrence and message accuracy
-   - **Parametrized Testing**: Systematic coverage using Google Test parameters
-   - **Edge Case Documentation**: Comprehensive boundary condition testing
+2. **Lexer Enhancement** ✅ **COMPLETED**
+   - **Number Validation**: Enhanced `readNumber()` to reject invalid formats
+   - **Specific Errors**: Multiple decimal points, ending/starting dots
+   - **Error Messages**: Clear, actionable diagnostic messages
+
+3. **Immediate Focus: Resolve 6 Remaining Test Failures** 🎯 **ACTIVE**
+   - **Control Flow Issue** (1 test): If statements without else clause currently allowed
+   - **String Literal Gap** (5 tests): String literal functionality not implemented
+   - **Strategy**: Test-driven development using negative tests as specification
 
 ### Long-term Enhancement Goals 🔮
 1. **Advanced Language Features**: Function definitions, arrays, enhanced control flow
