@@ -121,31 +121,20 @@ The ArithLang compiler has achieved **comprehensive negative test suite implemen
 
 ## Upcoming Development Tasks
 
-### HIGHEST PRIORITY: Negative Test Failure Resolution 🎯 **ACTIVE**
 
-With 91 negative tests implemented and 85 passing, the immediate focus is resolving the **6 remaining failures** to achieve 100% negative test coverage:
+### HIGHEST PRIORITY: StringLiteralSyntaxErrorTests 해결 🎯 **ACTIVE**
 
-1. **Control Flow Grammar Enforcement** 🎯 **HIGH PRIORITY**
-   - **Failing Test**: `If_MissingElse` - Currently if statements don't require else clause
-   - **Issue**: Parser accepts `if (x > 0) { print 1; }` without else
-   - **Required Fix**: Enforce BNF grammar rule requiring else clause in if statements
-   - **Impact**: 1 test failure resolved
+현재 최우선 작업은 StringLiteralSyntaxErrorTests(문자열 리터럴 관련 음수 테스트) 3개 실패 케이스 해결입니다.
 
-2. **String Literal Implementation** 🎯 **MEDIUM PRIORITY**
-   - **Failing Tests**: 5 tests across string literal functionality
-     - `Print_InvalidEscape`: String escape sequence validation
-     - `String_InvalidEscape_Unknown`: Unknown escape sequences
-     - `String_InArithmetic`: String + number operations
-     - `String_InComparison`: String comparison operations  
-     - `String_AsUnaryOperand`: Unary minus on strings
-   - **Root Cause**: String literal support not yet implemented in lexer/parser
-   - **Impact**: 5 test failures resolved once string literals are implemented
+- 남은 실패 테스트:
+  - `String_InArithmetic`: 문자열 + 숫자 연산 오류 검출
+  - `String_InComparison`: 문자열 비교 연산 오류 검출
+  - `String_AsUnaryOperand`: 문자열 단항 연산 오류 검출
 
-3. **Test-Driven Development Approach** 🎯 **STRATEGIC**
-   - **Current State**: Comprehensive negative test suite acting as specification
-   - **Development Strategy**: Fix failing tests one by one to improve parser robustness
-   - **Quality Metric**: Target 100% negative test pass rate (91/91)
-   - **Documentation**: Keep `specs/test_parser_negative_cases.md` updated with progress
+이 문제들은 파서/AST/코드 생성기에서 타입 체크 및 예외 처리가 부족하여 발생합니다.
+문자열과 숫자 연산이 혼합될 때 명확한 예외를 던지도록 구현해야 하며, 테스트가 통과하면 100% 음수 테스트 커버리지를 달성할 수 있습니다.
+
+추가로, 관련 구현이 완료되면 Memory Bank와 문서(specs/test_parser_negative_cases.md)도 함께 업데이트해야 합니다.
 
 ### Implementation Notes 📝
 - **Testing Strategy**: Focus on both error detection AND error message quality

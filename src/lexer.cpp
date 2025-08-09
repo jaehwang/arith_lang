@@ -100,10 +100,7 @@ std::string Lexer::readString() {
                     str += '"';
                     break;
                 default:
-                    // For now, treat unknown escape sequences as literal
-                    str += '\\';
-                    str += currentChar;
-                    break;
+                    throw std::runtime_error("Invalid escape sequence in string literal");
             }
         } else {
             str += currentChar;
