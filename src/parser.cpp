@@ -213,8 +213,9 @@ std::unique_ptr<ASTNode> Parser::parseIfStatement() {
         getNextToken(); // consume 'else'
         elseBlock = parseBlock();
         if (!elseBlock) return nullptr;
+    } else {
+        throw std::runtime_error("Expected 'else' after 'if' statement");
     }
-    
     return std::make_unique<IfStmtAST>(std::move(condition), 
                                        std::move(thenBlock), 
                                        std::move(elseBlock));
