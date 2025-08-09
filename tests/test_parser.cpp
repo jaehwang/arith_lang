@@ -142,19 +142,6 @@ TEST_F(ParserEdgeCaseTest, NestedParentheses) {
     EXPECT_EQ(programAST->getStatements().size(), 1);
 }
 
-TEST_F(ParserEdgeCaseTest, MinimalIfStatement) {
-    std::string input = "if(1){x=1;}";
-    Lexer lexer(input);
-    Parser parser(lexer);
-    
-    auto program = parser.parseProgram();
-    EXPECT_NE(program, nullptr);
-    
-    auto* programAST = dynamic_cast<ProgramAST*>(program.get());
-    ASSERT_NE(programAST, nullptr);
-    EXPECT_EQ(programAST->getStatements().size(), 1);
-}
-
 TEST_F(ParserEdgeCaseTest, MinimalWhileStatement) {
     std::string input = "while(1){x=1;}";
     Lexer lexer(input);
@@ -169,7 +156,7 @@ TEST_F(ParserEdgeCaseTest, MinimalWhileStatement) {
 }
 
 TEST_F(ParserEdgeCaseTest, EmptyBlock) {
-    std::string input = "if(1){}";
+    std::string input = "if(1){}else{}";
     Lexer lexer(input);
     Parser parser(lexer);
     

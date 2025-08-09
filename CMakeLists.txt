@@ -31,6 +31,7 @@ set(SOURCES
     src/parser.cpp
     src/codegen.cpp
     src/main.cpp
+    src/type_check.cpp
 )
 
 set(LEXER_TEST_SOURCES
@@ -63,6 +64,7 @@ set(PARSER_NEGATIVE_TEST_SOURCES
     src/lexer.cpp
     src/parser.cpp
     src/codegen.cpp
+    src/type_check.cpp
     tests/test_parser_negative.cpp
 )
 

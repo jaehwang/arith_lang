@@ -2,10 +2,22 @@
 
 ## Architecture Overview
 
-ArithLang follows a **traditional compiler pipeline** with modern C++ practices:
+ArithLang follows a **traditional compiler pipeline** with modern C++### 5. AST (Abstract Syntax Tree)
+**Location**: `include/ast.h`
+**Pattern**: Composite pattern with visitor support
+
+**Memory Management Pattern**:
+```cpp
+// Smart pointer ownership
+std::unique_ptr<ASTNode> left;
+std::unique_ptr<ASTNode> right;
+
+// Factory pattern for creation
+static std::unique_ptr<NumberNode> create(double value);
+```d comprehensive type safety:
 
 ```
-Source Code (.k) → Lexer → Parser → AST → CodeGen → LLVM IR → JIT Execution
+Source Code (.k) → Lexer → Parser → Type Checker → AST → CodeGen → LLVM IR → JIT Execution
 ```
 
 Each phase has **clear separation of concerns** and is independently testable.
@@ -37,7 +49,45 @@ Token handleKeywordOrIdentifier() { /* focused logic */ }
 Token handleOperator() { /* focused logic */ }
 ```
 
-### 2. Parser (Syntax Analysis)
+### 3. Type Checker (Type Safety)
+**Location**: `src/type_check.cpp`, `include/type_check.h`
+**Pattern**: Recursive AST validation with type safety enforcement
+
+**Key Design Decisions**:
+- **Pipeline Integration**: Positioned between parsing and code generation
+- **Recursive Validation**: Traverses all AST nodes for comprehensive type checking
+- **String Type Safety**: Prevents string literals in arithmetic/comparison contexts
+- **Clean Interface**: Simple `void typeCheck(ASTNode* node)` function
+- **Error Reporting**: Clear, specific error messages for type violations
+
+**Implementation Pattern**:
+```cpp
+void typeCheck(ASTNode* node) {
+    if (!node) return;
+    
+    // Binary Operation Type Safety
+    if (auto bin = dynamic_cast<BinaryExprAST*>(node)) {
+        typeCheck(bin->getLHS());
+        typeCheck(bin->getRHS());
+        if (dynamic_cast<StringLiteralAST*>(bin->getLHS())) {
+            throw std::runtime_error("String literal cannot be used in binary operation");
+        }
+        return;
+    }
+    
+    // Recursive validation for all node types...
+}
+```
+
+**Integration in Main Pipeline**:
+```cpp
+// src/main.cpp compilation pipeline
+auto programAST = parser.parseProgram();
+typeCheck(programAST.get());  // Type safety validation
+auto result = programAST->codegen();  // Proceed to code generation
+```
+
+### 4. Parser (Syntax Analysis)
 **Location**: `src/parser.cpp`, `include/parser.h`
 **Pattern**: Recursive descent with operator precedence
 

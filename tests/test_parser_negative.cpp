@@ -3,6 +3,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "ast.h"
+#include "type_check.h"
 
 // Base class for all negative parser tests
 class NegativeParserTests : public ::testing::Test {
@@ -10,21 +11,23 @@ protected:
     void SetUp() override {}
     void TearDown() override {}
     
-    // Helper method to expect parsing to throw an exception
+    // Helper method to expect parsing or type checking to throw an exception
     void expectParseError(const std::string& code) {
         EXPECT_THROW({
             Lexer lexer(code);
             Parser parser(lexer);
             auto program = parser.parseProgram();
-        }, std::runtime_error) << "Code should have failed to parse: " << code;
+            typeCheck(program.get());
+        }, std::runtime_error) << "Code should have failed to parse or type check: " << code;
     }
-    
-    // Helper method to expect parsing to throw with specific error message
+
+    // Helper method to expect parsing or type checking to throw with specific error message
     void expectParseErrorWithMessage(const std::string& code, const std::string& expectedMessage) {
         try {
             Lexer lexer(code);
             Parser parser(lexer);
             auto program = parser.parseProgram();
+            typeCheck(program.get());
             FAIL() << "Expected exception was not thrown for code: " << code;
         } catch (const std::runtime_error& e) {
             EXPECT_THAT(e.what(), testing::HasSubstr(expectedMessage)) 

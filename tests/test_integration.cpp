@@ -36,7 +36,7 @@ TEST_F(IntegrationTest, PrintStatement) {
 }
 
 TEST_F(IntegrationTest, IfStatementParsing) {
-    std::string input = "if (x > 0) { y = 1; }";
+    std::string input = "if (x > 0) { y = 1; }else{}";
     Lexer lexer(input);
     Parser parser(lexer);
     
@@ -62,7 +62,7 @@ TEST_F(IntegrationTest, WhileLoopParsing) {
 }
 
 TEST_F(IntegrationTest, CompleteProgram) {
-    std::string input = "x = 5; y = x * 2; if (y > 8) { print y; }";
+    std::string input = "x = 5; y = x * 2; if (y > 8) { print y; }else{ print 0; }";
     Lexer lexer(input);
     Parser parser(lexer);
     

@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "codegen.h"
 #include "ast.h"
+#include "type_check.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/BasicBlock.h"
@@ -115,7 +116,10 @@ void compileSource(const std::string& input) {
     if (!programAST) {
         throw std::runtime_error("프로그램 파싱 실패");
     }
-    
+
+    // 타입 체크 단계 추가
+    typeCheck(programAST.get());
+
     // Generate IR for entire program
     llvm::Value* result = programAST->codegen();
     if (!result) {
