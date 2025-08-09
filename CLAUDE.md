@@ -11,5 +11,9 @@ The memory bank files in `memory-bank/` directory contain current project contex
 - @memory-bank/activeContext.md: Current work focus and recent changes  
 - @memory-bank/progress.md: Completed components and current status
 - @memory-bank/systemPatterns.md: Architecture and design patterns
-- @memory-bank/techContext.md: Technologies and development setup
 - @memory-bank/productContext.md: Project purpose and user experience goals
+- @memory-bank/techContext.md: Technologies and development setup
+
+## Commit Guidelines
+
+Claude must follow the commit message writing guidelines in @rules/commit_log.md.
