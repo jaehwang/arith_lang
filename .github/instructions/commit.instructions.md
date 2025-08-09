@@ -2,4 +2,4 @@
 applyTo: '**'
 ---
 
-Commit message writing guidelines are in the rules/commit_log.md file. Follow these guidelines.
+Commit message writing guidelines are in the rules/commit_log.md file. You MUST follow these guidelines.
