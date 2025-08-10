@@ -20,8 +20,8 @@ AI와 함께 코드를 개발할 때는 전통적인 개발과 다른 접근법�
 
 ### 문제 상황
 - 초기에는 정상 케이스만 통과하는 파서
-- 잘못된 구문(`x = 1 y = 2`)도 허용하는 문제
-- 91개 중 85개만 통과하는 negative 테스트
+- 잘못된 구문(`x = 1 y = 2`)도 허용
+- 실행 방식 정의가 없는 구문(`x = "hello" + 2`)도 허용
 
 ### 해결 과정
 1. **체계적 negative 테스트 구축**
@@ -111,55 +111,6 @@ TEST(ParserNegativeTest, StringInArithmetic) {
 #### 시스템 테스트 (End-to-End Tests)
 실제 사용자 시나리오 검증
 
-## AI 특화 테스트 기법
-
-### 1. 예외 처리 집중 검증
-
-AI가 종종 놓치는 오류 처리를 철저히 테스트:
-
-```cpp
-// AI가 구현한 함수에 대한 예외 테스트
-TEST(LexerTest, InvalidNumberFormat) {
-    Lexer lexer("12.34.56");  // 잘못된 숫자 형식
-    EXPECT_THROW(lexer.nextToken(), std::runtime_error);
-}
-
-TEST(LexerTest, NumberEndingWithDot) {
-    Lexer lexer("123.");
-    EXPECT_THROW(lexer.nextToken(), std::runtime_error);
-}
-```
-
-### 2. 경계값 테스트 강화
-
-```cpp
-// 빈 입력
-TEST(ParserTest, EmptyProgram) {
-    Parser parser("");
-    auto ast = parser.parseProgram();
-    EXPECT_NE(ast, nullptr);
-    EXPECT_EQ(ast->statements.size(), 0);
-}
-
-// 최대 복잡도
-TEST(ParserTest, DeeplyNestedExpression) {
-    Parser parser("x = (((((1 + 2) * 3) - 4) / 5) + 6);");
-    EXPECT_NO_THROW(parser.parseProgram());
-}
-```
-
-### 3. 회귀 테스트 (Regression Tests)
-
-AI 수정 후 기존 기능이 깨지는 것을 방지:
-
-```cpp
-// ArithLang에서 발견된 버그를 방지하는 회귀 테스트
-TEST(RegressionTest, SemicolonRequiredAfterStatement) {
-    // 이전에는 "x = 1 y = 2"가 잘못 파싱됨
-    EXPECT_THROW(parser.parseProgram("x = 1 y = 2"), std::runtime_error);
-}
-```
-
 ## 테스트 자동화 전략
 
 ### 1. 지속적 검증 파이프라인
@@ -238,14 +189,6 @@ TEST_P(InvalidSyntaxTest, ThrowsParseError) {
     Parser parser(GetParam());
     EXPECT_THROW(parser.parseProgram(), std::runtime_error);
 }
-```
-
-### 커버리지 도구 활용
-```bash
-# 코드 커버리지 측정
-gcov build/*.o
-lcov --capture --directory build --output-file coverage.info
-genhtml coverage.info --output-directory coverage_report
 ```
 
 ## 베스트 프랙티스
