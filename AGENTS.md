@@ -1,4 +1,4 @@
-# AGENTS.md
+# AI Agent Instructions
 
 This file contains instructions that AI must strictly follow. AI must adhere to the instructions in this file and those referenced within it.
 
