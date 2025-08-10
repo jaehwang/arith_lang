@@ -77,26 +77,7 @@ arith_lang/
 
 ## 아키텍처
 
-1. **Lexer** (`src/lexer.cpp`): 입력 문자열을 토큰으로 분해
-   - 산술/비교 연산자, 키워드(`if`, `else`, `while`, `print`), 식별자, 숫자 인식
-   - 다중 문자 연산자 지원 (`>=`, `<=`, `==`, `!=`)
-   - 라인 주석 처리 (`//`)
-
-2. **Parser** (`src/parser.cpp`): 토큰을 추상 구문 트리(AST)로 변환
-   - 연산자 우선순위 파싱 (Pratt parser 스타일)
-   - 우선순위: 비교연산(5) < 덧셈/뺄셈(10) < 곱셈/나눗셈(40)
-   - 조건문, 반복문, 블록 구문 지원
-
-3. **AST** (`include/ast.h`): 추상 구문 트리 노드들
-   - 표현식: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`, `AssignmentExprAST`
-   - 문장: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
-
-4. **CodeGen** (`src/codegen.cpp`): AST를 LLVM IR로 변환
-   - 변수 저장을 위한 alloca/load/store 명령어 생성
-   - 조건/반복문을 위한 기본 블록 및 분기 명령어 생성
-   - 비교 연산을 위한 LLVM 부동소수점 비교 명령어
-
-5. **Main** (`src/main.cpp`): 컴파일러 드라이버
+ArithLang의 상세한 아키텍처 정보는 [memory-bank/systemPatterns.md](memory-bank/systemPatterns.md)에서 확인하실 수 있습니다.
 
 ## 의존성
 

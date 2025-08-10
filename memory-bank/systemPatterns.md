@@ -2,19 +2,7 @@
 
 ## Architecture Overview
 
-ArithLang follows a **traditional compiler pipeline** with modern C++### 5. AST (Abstract Syntax Tree)
-**Location**: `include/ast.h`
-**Pattern**: Composite pattern with visitor support
-
-**Memory Management Pattern**:
-```cpp
-// Smart pointer ownership
-std::unique_ptr<ASTNode> left;
-std::unique_ptr<ASTNode> right;
-
-// Factory pattern for creation
-static std::unique_ptr<NumberNode> create(double value);
-```d comprehensive type safety:
+ArithLang follows a **traditional compiler pipeline** with modern C++ and comprehensive type safety:
 
 ```
 Source Code (.k) → Lexer → Parser → Type Checker → AST → CodeGen → LLVM IR → JIT Execution
@@ -49,7 +37,7 @@ Token handleKeywordOrIdentifier() { /* focused logic */ }
 Token handleOperator() { /* focused logic */ }
 ```
 
-### 3. Type Checker (Type Safety)
+### 2. Type Checker (Type Safety)
 **Location**: `src/type_check.cpp`, `include/type_check.h`
 **Pattern**: Recursive AST validation with type safety enforcement
 
@@ -87,7 +75,7 @@ typeCheck(programAST.get());  // Type safety validation
 auto result = programAST->codegen();  // Proceed to code generation
 ```
 
-### 4. Parser (Syntax Analysis)
+### 3. Parser (Syntax Analysis)
 **Location**: `src/parser.cpp`, `include/parser.h`
 **Pattern**: Recursive descent with operator precedence
 
@@ -148,7 +136,7 @@ std::unique_ptr<ASTNode> parseProgram() {
 }
 ```
 
-### 3. AST (Abstract Syntax Tree)
+### 4. AST (Abstract Syntax Tree)
 **Location**: `include/ast.h`
 **Pattern**: Composite pattern with visitor support
 
@@ -168,7 +156,7 @@ static std::unique_ptr<NumberNode> create(double value);
 - **Statement Nodes**: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
 - **Assignment**: `AssignmentExprAST` (bridge between expression and statement)
 
-### 4. Code Generation
+### 5. Code Generation
 **Location**: `src/codegen.cpp`, `include/codegen.h`
 **Pattern**: Visitor pattern over AST nodes
 
@@ -318,14 +306,6 @@ llvm::Value* result = builder.CreateAdd(left, right, "addtmp");
 }
 ```
 
-### Git Workflow Pattern
-```bash
-# Atomic commits for specific improvements
-git commit -m "refactor: reduce main function from 70 to 22 lines"
-git commit -m "refactor: optimize lexer getNextToken function"
-git commit -m "cleanup: remove unused Parser::parse function"
-```
-
 ## Design Principles Applied
 
 1. **Single Responsibility**: Each component has one clear purpose
@@ -381,16 +361,17 @@ Uses LLVM's IRBuilder for instruction generation:
 
 ### Dependency Flow
 ```
-main.cpp → parser.h → lexer.h → ast.h → codegen.h
-    ↓         ↓         ↓         ↓         ↓
-   CLI    Parsing   Tokenizing  AST     LLVM IR
+main.cpp → parser.h → lexer.h → type_check.h → ast.h → codegen.h
+    ↓         ↓         ↓           ↓           ↓         ↓
+   CLI    Parsing   Tokenizing  Type Check   AST     LLVM IR
 ```
 
 ### Data Flow
 1. **Source** → Lexer → **Tokens**
 2. **Tokens** → Parser → **AST**
-3. **AST** → CodeGen → **LLVM IR**
-4. **LLVM IR** → Execution → **Results**
+3. **AST** → Type Checker → **Validated AST**
+4. **Validated AST** → CodeGen → **LLVM IR**
+5. **LLVM IR** → Execution → **Results**
 
 ## Extension Points
 
