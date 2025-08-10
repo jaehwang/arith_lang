@@ -143,8 +143,8 @@ Google Test를 사용한 단위 테스트도 포함되어 있습니다:
 ```bash
 # 단위 테스트 빌드 및 실행
 cd build
-make test_syntax
-./test_syntax
+make
+ctest
 ```
 
 ## 사용법
@@ -173,62 +173,29 @@ lli output.ll
 
 ## 예제
 
+다양한 ArithLang 예제는 `tests/k/` 디렉토리에서 확인하실 수 있습니다:
+
 ### 기본 산술 연산
 ```bash
-# basic.k 파일 생성
-echo "2 + 3 * 4" > basic.k
-
-# 컴파일
-$ ./arithc -o basic.ll basic.k
-LLVM IR이 성공적으로 생성되었습니다: basic.ll
-
-# 생성된 IR 확인
-$ cat basic.ll
-; ModuleID = 'ArithLang'
-define double @main() {
-entry:
-  %multmp = fmul double 3.000000e+00, 4.000000e+00
-  %addtmp = fadd double 2.000000e+00, %multmp
-  ret double %addtmp
-}
-```
-
-### 변수 할당과 출력
-```bash
-# program.k 파일 생성
-echo "x=42; y=x*2+10; print y;" > program.k
-
-# 컴파일 및 실행
-$ ./arithc -o program.ll program.k
-LLVM IR이 성공적으로 생성되었습니다: program.ll
-
-$ lli program.ll
-94.000000
+# 팩토리얼 계산 예제 실행
+$ ./arithc -o factorial.ll tests/k/factorial.k
+$ lli factorial.ll
+120.000000
 ```
 
 ### 비교 연산자
 ```bash
-# comparison.k 파일 생성
-echo "x = 5; y = 3; if (x > y) { print 1; } else { print 0; }" > comparison.k
-
-# 컴파일 및 실행
-$ ./arithc -o comparison.ll comparison.k
-LLVM IR이 성공적으로 생성되었습니다: comparison.ll
-
+# 비교 연산 예제 실행
+$ ./arithc -o comparison.ll tests/k/test_comparison.k
 $ lli comparison.ll
 1.000000
 ```
 
 ### 조건문과 반복문
 ```bash
-# loop.k 파일 생성
-echo "x = 3; while (x) { print x; x = x - 1; }" > loop.k
-
-# 컴파일 및 실행
-$ ./arithc -o loop.ll loop.k
-LLVM IR이 성공적으로 생성되었습니다: loop.ll
-
-$ lli loop.ll
+# while 루프 예제 실행
+$ ./arithc -o while.ll tests/k/test_while.k
+$ lli while.ll
 3.000000
 2.000000
 1.000000
@@ -236,73 +203,17 @@ $ lli loop.ll
 
 ### 연산자 우선순위
 ```bash
-# precedence.k 파일 생성
-echo "x = 2 + 3 > 4; if (x) { print 1; } else { print 0; }" > precedence.k
-
-# 컴파일 및 실행
-$ ./arithc -o precedence.ll precedence.k
-LLVM IR이 성공적으로 생성되었습니다: precedence.ll
-
+# 우선순위 테스트 예제 실행
+$ ./arithc -o precedence.ll tests/k/test_precedence.k
 $ lli precedence.ll
 1.000000
 ```
 
-### 중첩된 조건문
-```bash
-# nested.k 파일 생성
-echo "x = 10; if (x > 5) { if (x < 15) { print 1; } else { print 2; } } else { print 0; }" > nested.k
-
-# 컴파일 및 실행
-$ ./arithc -o nested.ll nested.k
-LLVM IR이 성공적으로 생성되었습니다: nested.ll
-
-$ lli nested.ll
-1.000000
-```
-
-### 팩토리얼 계산 (반복문 활용)
-```bash
-# factorial.k 파일 생성
-echo "n = 5; result = 1; while (n > 0) { result = result * n; n = n - 1; } print result;" > factorial.k
-
-# 컴파일 및 실행
-$ ./arithc -o factorial.ll factorial.k
-LLVM IR이 성공적으로 생성되었습니다: factorial.ll
-
-$ lli factorial.ll
-120.000000000000000
-```
-
 ### 고급 Printf 기능
 ```bash
-# printf_demo.k 파일 생성
-cat > printf_demo.k << 'EOF'
-// 문자열 리터럴
-print "Hello, ArithLang!";
-print "This line has\na newline";
-
-// 포맷 문자열
-pi = 3.14159265358979;
-print "Pi = %.3f\n", pi;
-print "Scientific: %e\n", pi;
-
-// 다중 인수
-x = 10.5;
-y = 20.3;
-print "x=%f, y=%f, sum=%.1f\n", x, y, x + y;
-
-// 문자열 포맷
-print "Language: %s\n", "ArithLang";
-
-// 리터럴 퍼센트
-print "Progress: %% complete\n";
-EOF
-
-# 컴파일 및 실행
-$ ./arithc -o printf_demo.ll printf_demo.k
-LLVM IR이 성공적으로 생성되었습니다: printf_demo.ll
-
-$ lli printf_demo.ll
+# printf 기능 종합 테스트 실행
+$ ./arithc -o printf.ll tests/k/test_complete_printf.k
+$ lli printf.ll
 Hello, ArithLang!This line has
 a newlinePi = 3.142
 Scientific: 3.141593e+00
@@ -310,6 +221,13 @@ x=10.500000, y=20.300000, sum=30.8
 Language: ArithLang
 Progress: % complete
 ```
+
+### 사용 가능한 예제 파일들
+
+- **기본 연산**: `factorial.k`, `hello.k`, `pi_leibniz.k`
+- **비교 연산**: `test_comparison.k`, `test_eq.k`, `test_gte.k`, `test_lt.k`, `test_lte.k`, `test_neq.k`
+- **제어 구조**: `test_if.k`, `test_if_false.k`, `test_while.k`
+- **기타**: `test_precedence.k`, `test_unary_minus.k`, `test_complete_printf.k`
 
 ## IR 실행 방법
 
