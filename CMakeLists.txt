@@ -24,74 +24,44 @@ include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
+# Public headers
 include_directories(include)
 
-set(SOURCES
-    src/lexer.cpp
-    src/parser.cpp
-    src/codegen.cpp
-    src/main.cpp
-    src/type_check.cpp
-)
-
-set(LEXER_TEST_SOURCES
-    src/lexer.cpp
-    tests/test_lexer.cpp
-)
-
-set(PARSER_TEST_SOURCES
-    src/lexer.cpp
-    src/parser.cpp
-    src/codegen.cpp
-    tests/test_parser.cpp
-)
-
-set(INTEGRATION_TEST_SOURCES
-    src/lexer.cpp
-    src/parser.cpp
-    src/codegen.cpp
-    tests/test_integration.cpp
-)
-
-set(CODEGEN_TEST_SOURCES
-    src/lexer.cpp
-    src/parser.cpp
-    src/codegen.cpp
-    tests/test_codegen.cpp
-)
-
-set(PARSER_NEGATIVE_TEST_SOURCES
+# Core static library (compile once, link everywhere)
+add_library(arith_core STATIC
     src/lexer.cpp
     src/parser.cpp
     src/codegen.cpp
     src/type_check.cpp
-    tests/test_parser_negative.cpp
 )
+target_include_directories(arith_core PUBLIC include)
 
-add_executable(arithc ${SOURCES})
-
+# LLVM components (used by targets that actually require codegen)
 llvm_map_components_to_libnames(llvm_libs support core irreader)
-target_link_libraries(arithc ${llvm_libs})
 
-# Build tests with downloaded GTest
-add_executable(test_lexer ${LEXER_TEST_SOURCES})
-target_link_libraries(test_lexer gtest_main)
+# Main executable
+add_executable(arithc src/main.cpp)
+target_link_libraries(arithc arith_core ${llvm_libs})
 
-add_executable(test_parser ${PARSER_TEST_SOURCES})
-target_link_libraries(test_parser ${llvm_libs} gtest_main)
-
-add_executable(test_integration ${INTEGRATION_TEST_SOURCES})
-target_link_libraries(test_integration ${llvm_libs} gtest_main)
-
-add_executable(test_codegen ${CODEGEN_TEST_SOURCES})
-target_link_libraries(test_codegen ${llvm_libs} gtest_main)
-
-add_executable(test_parser_negative ${PARSER_NEGATIVE_TEST_SOURCES})
-target_link_libraries(test_parser_negative ${llvm_libs} gtest_main gmock_main)
-
+# Tests
 enable_testing()
+
+add_executable(test_lexer tests/test_lexer.cpp)
+target_link_libraries(test_lexer arith_core gtest_main)
 add_test(NAME LexerTests COMMAND test_lexer)
+
+add_executable(test_parser tests/test_parser.cpp)
+target_link_libraries(test_parser arith_core ${llvm_libs} gtest_main)
 add_test(NAME ParserTests COMMAND test_parser)
+
+add_executable(test_parser_negative tests/test_parser_negative.cpp)
+target_link_libraries(test_parser_negative arith_core ${llvm_libs} gtest_main gmock_main)
 add_test(NAME ParserNegativeTests COMMAND test_parser_negative)
+
+add_executable(test_codegen tests/test_codegen.cpp)
+target_link_libraries(test_codegen arith_core ${llvm_libs} gtest_main)
 add_test(NAME CodeGenTests COMMAND test_codegen)
+
+add_executable(test_integration tests/test_integration.cpp)
+target_link_libraries(test_integration arith_core ${llvm_libs} gtest_main)
 add_test(NAME IntegrationTests COMMAND test_integration)
