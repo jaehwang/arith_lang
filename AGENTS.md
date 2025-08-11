@@ -14,6 +14,12 @@ AI must follow the comment guidelines in rules/anchor-comments.md file.
 
 AI must follow the commit message writing guidelines in rules/commit-log.md file.
 
+## Test Commands
+
+- **Build**: `cmake --build build`
+- **Unit tests**: `cd build && ctest` 
+- **Integration tests**: `./test_runner.sh` (MUST be run from project root directory)
+
 ## Directory-Specific AGENTS.md Files
 
 * **Always check for `AGENTS.md` files in specific directories** before working on code within them. These files contain targeted context.
