@@ -11,6 +11,7 @@
 - 이슈 참조: Fixes #123, Closes #456
 
 <footer>
+- AI 도구 정보
 ```
 
 ## Type 분류
@@ -37,8 +38,8 @@
 - 동작 방식 설명
 
 ## Footer 규칙
-- 도구 생성 정보: `🤖 Generated with [도구명](링크)`
-- 공동 작성자: `Co-Authored-By: 이름 <이메일>`
+- Body와 공백 한 줄로 구분
+- AI 도구 정보를 다음 형식으로 작성: `🤖 Generated with [도구명](링크)`
 
 ## Body에서 이슈 참조 작성법
 - `Fixes #123`: 버그 수정 시 사용
