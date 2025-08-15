@@ -3,14 +3,24 @@
 #include "ast.h"
 #include <memory>
 #include <map>
+#include <stdexcept>
+
+// ParseError exception carrying source location
+class ParseError : public std::runtime_error {
+public:
+    SourceLocation loc;
+    explicit ParseError(const std::string& message, SourceLocation where)
+        : std::runtime_error(message), loc(std::move(where)) {}
+};
 
 class Parser {
 private:
     Lexer& lexer;
     Token currentToken;
+    Token previousToken;
     std::map<int, int> binOpPrecedence;
     
-    void getNextToken() { currentToken = lexer.getNextToken(); }
+    void getNextToken() { previousToken = currentToken; currentToken = lexer.getNextToken(); }
     std::unique_ptr<ExprAST> parseExpression();
     std::unique_ptr<ExprAST> parseAssignment();
     std::unique_ptr<ASTNode> parsePrintStatement();
@@ -26,6 +36,12 @@ private:
     std::unique_ptr<ExprAST> parseStringLiteral();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();
+    [[noreturn]] void errorHere(const std::string& msg) {
+        throw ParseError(msg, currentToken.range.start);
+    }
+    [[noreturn]] void errorAt(const std::string& msg, SourceLocation loc) {
+        throw ParseError(msg, std::move(loc));
+    }
     
 public:
     Parser(Lexer& lexer);

@@ -9,6 +9,29 @@ The ArithLang compiler has **FULLY ACHIEVED** complete negative test suite succe
 - **✅ Production-Ready Error Handling**: Complete systematic type safety and syntax validation
 - **✅ String Type Safety**: All string literal type violations properly detected and prevented
 
+## Update (2025-08-15): Parse Error Reporting & Anchors ✅
+
+- ✅ GCC-style diagnostics implemented for parse/type errors
+  - Format: `<file>:<line>:<column>: error: <message>`
+  - Source snippet + caret indicator line
+  - Byte-based columns; CR/LF normalized; tabs count as 1
+- ✅ Precise caret placement for common cases
+  - Missing semicolon: caret at `previousToken.range.end` (right after last expr)
+  - Missing `)`/`}`: caret at current unexpected token
+  - Unterminated string: caret at end-of-string position (o+1)
+- ✅ Unified error printing
+  - `ParseError` carries `SourceLocation`
+  - CLI catches `ParseError` and prints standardized diagnostics
+  - Type-check errors are wrapped into `ParseError` with best-effort location inference
+- ✅ Test runner integration
+  - `tests/k/*.k` include `// EXPECTED:` annotations (stderr subset for compile errors)
+  - `test_runner.sh` compares compiler stderr to EXPECTED lines for failing cases
+
+Next steps:
+- Propagate `SourceRange` into AST nodes and type checker to eliminate heuristic location inference
+- Optional: colored/JSON diagnostics for IDE tooling
+- Add more sample `.k` cases covering nested blocks and multiple error scenarios
+
 ## Recent Major Achievements
 
 ### Complete Type Checking System ✅ **NEW**
@@ -167,6 +190,15 @@ The ArithLang compiler has **FULLY ACHIEVED** complete negative test suite succe
 - **Documentation**: Update error handling patterns in systemPatterns.md
 
 ## Current Development Priorities
+
+### HIGHEST PRIORITY: Parse Error Reporting (file/line/column) 🚩
+Status: COMPLETED
+
+- Implemented per `specs/parse_error_reporting.md`
+- Lexer tracks filename/line/column; Token carries `SourceRange`
+- Parser throws `ParseError` with accurate locations; caret chosen intentionally per case
+- CLI prints standardized diagnostics; type errors wrapped to `ParseError`
+- Test runner validates compile-time stderr using `// EXPECTED:`
 
 ### HIGHEST PRIORITY: Code Quality & Robustness ✅ **COMPLETED**
 

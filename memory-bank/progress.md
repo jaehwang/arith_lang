@@ -99,6 +99,11 @@ All compiler phases are **fully implemented and optimized**:
   - Consistent handling of all language constructs
 
 ### Development Experience Enhancements
+- **Parse Error Reporting (COMPLETED)** ✅
+  - GCC-style diagnostics with file:line:column + caret
+  - `ParseError` with `SourceLocation`; unified print in CLI
+  - Precise caret: semicolon at previous token end; unterminated string at end-of-string
+  - Test runner checks stderr against `// EXPECTED:` in `.k` samples
 - **LLVM Integration** ✅: Fixed VSCode header recognition issues
 - **Build Process** ✅: Streamlined compilation and testing
 - **CLI Usability** ✅: gcc-style default output behavior (creates `a.ll` without `-o` flag)
@@ -246,6 +251,7 @@ Complete printf-like functionality is documented in **`specs/print.md`** includi
 
 ### Potential Enhancements
 1. **Enhanced Diagnostics**: More detailed error messages with suggestions
+  - Propagate `SourceRange` into AST/type checker to remove heuristic location inference in type errors
 2. **Optimization**: LLVM optimization pass integration  
 3. **Language Extensions**: Functions, arrays, or advanced data types
 4. **IDE Support**: Language server protocol implementation

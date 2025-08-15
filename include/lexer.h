@@ -2,6 +2,18 @@
 #include <string>
 #include <memory>
 
+// Source location and range (1-based indices)
+struct SourceLocation {
+    std::string file;
+    int line = 1;
+    int column = 1;
+};
+
+struct SourceRange {
+    SourceLocation start;
+    SourceLocation end; // exclusive end
+};
+
 enum TokenType {
     TOK_EOF = -1,
     TOK_NUMBER = -2,
@@ -34,16 +46,20 @@ struct Token {
     TokenType type;
     std::string value;
     double numValue;
+    SourceRange range;
     
-    Token(TokenType t, const std::string& v = "", double n = 0.0) 
-        : type(t), value(v), numValue(n) {}
+    Token(TokenType t, const std::string& v = "", double n = 0.0, SourceRange r = {}) 
+        : type(t), value(v), numValue(n), range(std::move(r)) {}
 };
 
 class Lexer {
 private:
     std::string input;
+    std::string filename;
     size_t pos;
     char currentChar;
+    int line = 1;
+    int column = 1; // 1-based
     
     void advance();
     void skipWhitespace();
@@ -51,11 +67,14 @@ private:
     double readNumber();
     std::string readIdentifier();
     std::string readString();
-    Token handleKeywordOrIdentifier(const std::string& identifier);
-    Token handleOperator(char ch);
+    Token handleKeywordOrIdentifier(const std::string& identifier, const SourceRange& range);
+    Token handleOperator(char ch, const SourceLocation& startLoc);
+    
+    inline SourceLocation currentLocation() const { return SourceLocation{filename, line, column}; }
     
 public:
-    Lexer(const std::string& input);
+    Lexer(const std::string& input, std::string filename = "<stdin>");
     Token getNextToken();
     bool isAtEnd() const { return pos >= input.length(); }
+    const std::string& getFilename() const { return filename; }
 };

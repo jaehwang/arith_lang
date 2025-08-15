@@ -33,6 +33,7 @@ add_library(arith_core STATIC
     src/parser.cpp
     src/codegen.cpp
     src/type_check.cpp
+  src/parse_error_reporting.cpp
 )
 target_include_directories(arith_core PUBLIC include)
 
@@ -65,3 +66,20 @@ add_test(NAME CodeGenTests COMMAND test_codegen)
 add_executable(test_integration tests/test_integration.cpp)
 target_link_libraries(test_integration arith_core ${llvm_libs} gtest_main)
 add_test(NAME IntegrationTests COMMAND test_integration)
+
+# Phase 1: Location and ParseError tests
+add_executable(test_source_location tests/test_source_location.cpp)
+target_link_libraries(test_source_location arith_core gtest_main gmock)
+add_test(NAME SourceLocationTests COMMAND test_source_location)
+
+add_executable(test_parser_error_helpers tests/test_parser_error_helpers.cpp)
+target_link_libraries(test_parser_error_helpers arith_core ${llvm_libs} gtest_main gmock)
+add_test(NAME ParserErrorHelpersTests COMMAND test_parser_error_helpers)
+
+add_executable(test_error_display tests/test_error_display.cpp)
+target_link_libraries(test_error_display arith_core gtest_main gmock)
+add_test(NAME ErrorDisplayTests COMMAND test_error_display)
+
+add_executable(test_integration_error_reporting tests/test_integration_error_reporting.cpp)
+target_link_libraries(test_integration_error_reporting arith_core ${llvm_libs} gtest_main gmock)
+add_test(NAME IntegrationErrorReportingTests COMMAND test_integration_error_reporting)

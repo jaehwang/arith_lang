@@ -17,7 +17,7 @@ TOTAL=0
 # EXPECTED 값을 추출하는 함수
 get_expected_result() {
     local k_file="$1"
-    # // EXPECTED: 로 시작하는 라인에서 값 추출
+    # // EXPECTED: 로 시작하는 모든 라인을 그대로(접두사 제거) 반환
     grep "^// EXPECTED:" "$k_file" | sed 's/^\/\/ EXPECTED: *//'
 }
 
@@ -39,12 +39,41 @@ run_test() {
     # 임시 IR 파일 생성
     local temp_ll="/tmp/arithc_test_${filename}.ll"
     
-    # 컴파일
-    if ! ./build/arithc -o "$temp_ll" "$k_file" 2>/dev/null; then
-        echo -e "${RED}FAIL${NC} (compilation error)"
-        FAILED=$((FAILED + 1))
-        TOTAL=$((TOTAL + 1))
-        return
+    # 컴파일(표준에러 캡처)
+    local compile_stderr
+    compile_stderr=$(./build/arithc -o "$temp_ll" "$k_file" 2>&1 1>/dev/null)
+    local compile_exit=$?
+    
+    if [ $compile_exit -ne 0 ]; then
+        # 컴파일 실패: EXPECTED가 에러 메시지라면 stderr에 포함되는지 확인
+        if [ -n "$expected" ]; then
+            local ok=1
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                if ! printf '%s' "$compile_stderr" | grep -Fq "$line"; then
+                    ok=0
+                    break
+                fi
+            done <<< "$expected"
+            if [ $ok -eq 1 ]; then
+                echo -e "${GREEN}PASS${NC}"
+                PASSED=$((PASSED + 1))
+            else
+                echo -e "${RED}FAIL${NC} (compilation error)"
+                echo "  Expected (subset):"
+                while IFS= read -r l; do echo "    $l"; done <<< "$expected"
+                echo "  Actual stderr:"
+                echo "$compile_stderr" | sed 's/^/    /'
+                FAILED=$((FAILED + 1))
+            fi
+            TOTAL=$((TOTAL + 1))
+            return
+        else
+            echo -e "${RED}FAIL${NC} (compilation error)"
+            FAILED=$((FAILED + 1))
+            TOTAL=$((TOTAL + 1))
+            return
+        fi
     fi
     
     # 실행 및 결과 캡처

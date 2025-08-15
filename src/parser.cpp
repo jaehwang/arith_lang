@@ -1,7 +1,7 @@
 #include "parser.h"
 #include <stdexcept>
 
-Parser::Parser(Lexer& lexer) : lexer(lexer), currentToken(TOK_EOF) {
+Parser::Parser(Lexer& lexer) : lexer(lexer), currentToken(TOK_EOF), previousToken(TOK_EOF) {
     // Comparison operators (lowest precedence)
     binOpPrecedence[TOK_EQ] = 5;
     binOpPrecedence[TOK_NEQ] = 5;
@@ -40,7 +40,7 @@ std::unique_ptr<ExprAST> Parser::parseParenExpr() {
     if (!v) return nullptr;
     
     if (currentToken.type != TOK_RPAREN)
-        throw std::runtime_error("Expected ')'");
+    errorHere("Expected ')'"); // AIDEV-NOTE: Caret at current token to indicate missing ')'.
     
     getNextToken(); // consume ')'
     return v;
@@ -83,7 +83,7 @@ std::unique_ptr<ExprAST> Parser::parsePrimary() {
         case TOK_MINUS:
             return parseUnaryExpr();
         default:
-            throw std::runtime_error("Unknown token when expecting an expression");
+            errorHere("Unknown token when expecting an expression");
     }
 }
 
@@ -119,7 +119,8 @@ std::unique_ptr<ExprAST> Parser::parseAssignment() {
         // lhs must be a variable for assignment
         auto* varExpr = dynamic_cast<VariableExprAST*>(lhs.get());
         if (!varExpr) {
-            throw std::runtime_error("Invalid assignment target");
+            // Point to the start of the LHS (previous token)
+            errorAt("Invalid assignment target", previousToken.range.start);
         }
         
         std::string varName = varExpr->getName();
@@ -153,7 +154,9 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
             
             // Semicolon is required for expression statements
             if (currentToken.type != TOK_SEMICOLON) {
-                throw std::runtime_error("Expected ';' after expression statement");
+                // Point to where ';' should be: end of the previous token
+                errorAt("Expected ';' after expression statement", previousToken.range.end);
+                // AIDEV-NOTE: Using previousToken.range.end so caret appears right after last expr token.
             }
             getNextToken(); // consume ';'
             
@@ -178,7 +181,9 @@ std::unique_ptr<ASTNode> Parser::parsePrintStatement() {
     }
     
     if (currentToken.type != TOK_SEMICOLON) {
-        throw std::runtime_error("Expected ';' after print statement");
+        // Point to where ';' should be: end of the previous token (end of last expr)
+    errorAt("Expected ';' after print statement", previousToken.range.end);
+    // AIDEV-NOTE: Align caret after last argument for clearer user guidance.
     }
     getNextToken(); // consume ';'
     
@@ -193,7 +198,7 @@ std::unique_ptr<ASTNode> Parser::parseIfStatement() {
     getNextToken(); // consume 'if'
     
     if (currentToken.type != TOK_LPAREN) {
-        throw std::runtime_error("Expected '(' after 'if'");
+        errorHere("Expected '(' after 'if'");
     }
     getNextToken(); // consume '('
     
@@ -201,7 +206,7 @@ std::unique_ptr<ASTNode> Parser::parseIfStatement() {
     if (!condition) return nullptr;
     
     if (currentToken.type != TOK_RPAREN) {
-        throw std::runtime_error("Expected ')' after if condition");
+        errorHere("Expected ')' after if condition");
     }
     getNextToken(); // consume ')'
     
@@ -211,10 +216,10 @@ std::unique_ptr<ASTNode> Parser::parseIfStatement() {
     std::unique_ptr<ASTNode> elseBlock = nullptr;
     if (currentToken.type == TOK_ELSE) {
         getNextToken(); // consume 'else'
-        elseBlock = parseBlock();
+    elseBlock = parseBlock();
         if (!elseBlock) return nullptr;
     } else {
-        throw std::runtime_error("Expected 'else' after 'if' statement");
+    errorHere("Expected 'else' after 'if' statement");
     }
     return std::make_unique<IfStmtAST>(std::move(condition), 
                                        std::move(thenBlock), 
@@ -225,7 +230,7 @@ std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
     getNextToken(); // consume 'while'
     
     if (currentToken.type != TOK_LPAREN) {
-        throw std::runtime_error("Expected '(' after 'while'");
+        errorHere("Expected '(' after 'while'");
     }
     getNextToken(); // consume '('
     
@@ -233,7 +238,7 @@ std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
     if (!condition) return nullptr;
     
     if (currentToken.type != TOK_RPAREN) {
-        throw std::runtime_error("Expected ')' after while condition");
+        errorHere("Expected ')' after while condition");
     }
     getNextToken(); // consume ')'
     
@@ -246,7 +251,7 @@ std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
 
 std::unique_ptr<ASTNode> Parser::parseBlock() {
     if (currentToken.type != TOK_LBRACE) {
-        throw std::runtime_error("Expected '{'");
+    errorHere("Expected '{'"); // AIDEV-NOTE: Blocks must start with '{'; error at current token.
     }
     getNextToken(); // consume '{'
     
@@ -257,12 +262,12 @@ std::unique_ptr<ASTNode> Parser::parseBlock() {
         if (stmt) {
             statements.push_back(std::move(stmt));
         } else {
-            throw std::runtime_error("Failed to parse statement in block");
+            errorHere("Failed to parse statement in block");
         }
     }
     
     if (currentToken.type != TOK_RBRACE) {
-        throw std::runtime_error("Expected '}'");
+    errorHere("Expected '}'"); // AIDEV-NOTE: Unterminated block; caret at unexpected token or EOF.
     }
     getNextToken(); // consume '}'
     
@@ -281,9 +286,12 @@ std::unique_ptr<ASTNode> Parser::parseProgram() {
                 // Statement parsing failed - this should not happen with proper error handling
                 throw std::runtime_error("Failed to parse statement");
             }
+        } catch (const ParseError&) {
+            // Re-throw parse errors directly
+            throw;
         } catch (const std::runtime_error& e) {
-            // If any statement fails to parse, the entire program is invalid
-            throw std::runtime_error("Parse error: " + std::string(e.what()));
+            // Wrap other runtime errors as parse errors at current token
+            throw ParseError(std::string(e.what()), currentToken.range.start);
         }
     }
     

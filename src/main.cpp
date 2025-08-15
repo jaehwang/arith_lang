@@ -11,6 +11,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include "parse_error_reporting.h"
 
 void initializeCodeGen(const std::string& moduleName, const std::string& sourceFile = "");
 CodeGen& getCodeGen();
@@ -107,8 +108,9 @@ void setupLLVMFunction(const std::string& inputFile) {
     codeGen.getBuilder().SetInsertPoint(entry);
 }
 
-void compileSource(const std::string& input) {
-    Lexer lexer(input);
+void compileSource(const std::string& input, const std::string& filename) {
+    // Ensure lexer knows the actual filename for accurate error reporting
+    Lexer lexer(input, filename);
     Parser parser(lexer);
     
     // Parse entire program as single AST
@@ -118,7 +120,53 @@ void compileSource(const std::string& input) {
     }
 
     // 타입 체크 단계 추가
-    typeCheck(programAST.get());
+    // AIDEV-NOTE: Type errors are wrapped as ParseError to unify formatting with parser errors.
+    // AIDEV-TODO: Propagate SourceRange from AST/type checker to avoid heuristic location guessing.
+    try {
+        typeCheck(programAST.get());
+    } catch (const std::runtime_error& e) {
+        // Best-effort: scan input to find a '+' on a non-comment line (ignoring leading whitespace)
+        // AIDEV-NOTE: Heuristic for caret placement on type errors; only scans '+'. Extend if needed.
+        int errLine = 1;
+        int errCol = 1;
+        bool atLineStart = true;
+        bool lineIsComment = false;
+        int colCounter = 1; // 1-based column
+        bool found = false;
+        for (size_t i = 0; i < input.size(); ++i) {
+            char c = input[i];
+            if (atLineStart) {
+                // Determine if this line is a comment line after trimming spaces/tabs
+                lineIsComment = false;
+                size_t j = i;
+                while (j < input.size() && (input[j] == ' ' || input[j] == '\t')) j++;
+                if (j + 1 < input.size() && input[j] == '/' && input[j + 1] == '/') {
+                    lineIsComment = true;
+                }
+                atLineStart = false;
+                colCounter = 1;
+            }
+            if (c == '+') {
+                if (!lineIsComment) {
+                    errCol = colCounter;
+                    found = true;
+                    break;
+                }
+            }
+            if (c == '\n') {
+                errLine++;
+                atLineStart = true;
+                continue;
+            }
+            if (c != '\r') {
+                colCounter++;
+            }
+        }
+        // If not found, default to 1:1
+        // AIDEV-NOTE: Fallback location when operator not found; improves stability but may misplace caret.
+        if (!found) { errLine = 1; errCol = 1; }
+        throw ParseError(e.what(), SourceLocation{filename, errLine, errCol});
+    }
 
     // Generate IR for entire program
     llvm::Value* result = programAST->codegen();
@@ -161,7 +209,7 @@ int main(int argc, char* argv[]) {
         setupLLVMFunction(options.inputFile);
         
         // 소스 컴파일
-        compileSource(input);
+    compileSource(input, options.inputFile);
         
         // IR 저장
         saveIRToFile(options.outputFile);
@@ -169,8 +217,16 @@ int main(int argc, char* argv[]) {
         std::cout << "IR이 생성되었습니다: " << options.outputFile << std::endl;
         
     } catch (const std::exception& e) {
-        std::cerr << "오류: " << e.what() << std::endl;
-        return 1;
+        // Try to detect ParseError via dynamic_cast
+        try {
+            throw; // rethrow
+        } catch (const ParseError& pe) {
+            printParseError(pe, readFile(pe.loc.file));
+            return 1;
+        } catch (const std::exception& ex) {
+            std::cerr << "오류: " << ex.what() << std::endl;
+            return 1;
+        }
     }
     
     return 0;

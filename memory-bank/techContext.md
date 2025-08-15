@@ -105,6 +105,9 @@ Follow this standardized testing sequence:
    ./test_runner.sh
    ```
 
+Notes:
+- For compile-time error samples under `tests/k/`, `test_runner.sh` validates compiler stderr against `// EXPECTED:` comments embedded in the `.k` files.
+
 ### Individual Test Execution
 ```bash
 # Individual unit test suites (from build directory)

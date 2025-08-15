@@ -96,14 +96,15 @@ if (currentToken.type == TOK_SEMICOLON) {
 
 // After: Required semicolon validation (FIXED)
 if (currentToken.type != TOK_SEMICOLON) {
-    throw std::runtime_error("Expected ';' after expression statement");
+    // caret just after the last expr token
+    errorAt("Expected ';' after expression statement", previousToken.range.end);
 }
 getNextToken(); // Required semicolon consumption
 ```
 
 **Error Handling Enhancement**:
 ```cpp
-// Enhanced parseProgram() with strict validation
+// Enhanced parseProgram() with precise locations
 try {
     auto stmt = parseStatement();
     if (stmt) {
@@ -111,8 +112,10 @@ try {
     } else {
         throw std::runtime_error("Failed to parse statement");
     }
+} catch (const ParseError&) {
+    throw; // preserve location-rich errors
 } catch (const std::runtime_error& e) {
-    throw std::runtime_error("Parse error: " + std::string(e.what()));
+    throw ParseError(std::string(e.what()), currentToken.range.start);
 }
 ```
 
@@ -188,6 +191,13 @@ llvm::Value* PrintStmtAST::codegen() {
 }
 ```
 
+**Formatted Print Pattern**:
+- 지원 포맷: `%f`, `%g`, `%e`, `%d`, `%s`, `%%`, 그리고 `%.Nf` 정밀도
+- `%d`: double → i32 변환 후 출력
+- `%s`: 문자열 리터럴만 허용(비리터럴은 예외)
+- `%%`: 리터럴 `%`
+- 문자열 단독 출력: `processedString`을 만들고 `%s`로 출력(자동 개행 없음)
+
 ## Refactoring Patterns Applied
 
 ### Function Length Management
@@ -255,21 +265,53 @@ FetchContent_MakeAvailable(googletest)
 - **System Tests**: Complete program execution
 - **Automated**: All tests run on build
 
-## Error Handling Patterns
+## Diagnostics
+
+### GCC-style Diagnostics
+ArithLang은 GCC 스타일의 진단을 출력합니다.
+
+- 예외 타입: `ParseError`가 `SourceLocation{file,line,column}` 포함
+- 토큰: `SourceRange{start,end}`로 캐럿 위치 산정
+- CLI 출력 형식:
+  - `<file>:<line>:<column>: error: <message>`
+  - 소스 스니펫 1줄 + 캐럿(^)
+
+캐럿 배치 규칙:
+- 세미콜론 누락 → `previousToken.range.end`
+- `)`/`}` 누락 → 현재(예상치 않은) 토큰
+- 미종결 문자열 → 문자열 끝(o+1)
+
+타입 오류 처리:
+- 현재: `std::runtime_error`를 CLI에서 휴리스틱 위치(첫 `+`)로 `ParseError`로 래핑
+- 향후: AST/TypeCheck에 `SourceRange` 전파하여 휴리스틱 제거
 
 ### Lexer Error Pattern
+- CRLF/LF 줄바꿈 정규화, `//` 라인 주석 스킵
+- 식별자에 0x80 이상(UTF-8 바이트) 허용
+- 문자열: 미종결/잘못된 이스케이프에서 `ParseError(currentLocation())`
 ```cpp
-// Position-aware error reporting
-if (current >= input.length()) {
-    return Token{TokenType::EOF_TOKEN, "", line, column};
+if (currentChar == '\0' || currentChar == '\n' || currentChar == '\r') {
+    throw ParseError("Unterminated string literal", currentLocation());
 }
 ```
 
 ### Parser Error Pattern
+- 세미콜론 누락 시 마지막 토큰 끝에 캐럿을 두기 위해 `previousToken.range.end` 사용
+- `parseProgram()`은 `ParseError`는 그대로 전달하고, 그 외 예외는 현재 토큰 위치로 래핑
 ```cpp
-// Structured error with context
-throw std::runtime_error("Expected ';' after statement at line " + 
-                         std::to_string(currentToken.line));
+if (currentToken.type != TOK_SEMICOLON) {
+    errorAt("Expected ';' after expression statement", previousToken.range.end);
+}
+
+try {
+    auto stmt = parseStatement();
+    if (stmt) statements.push_back(std::move(stmt));
+    else throw std::runtime_error("Failed to parse statement");
+} catch (const ParseError&) {
+    throw; // 위치 보존
+} catch (const std::runtime_error& e) {
+    throw ParseError(std::string(e.what()), currentToken.range.start);
+}
 ```
 
 ## Memory Management Patterns
@@ -325,20 +367,6 @@ llvm::Value* result = builder.CreateAdd(left, right, "addtmp");
 - **LLVM optimization**: Professional-grade backend
 - **JIT compilation**: Direct execution without intermediate files
 - **Type specialization**: Double precision throughout
-- Returns `llvm::Value*` representing the computed value
-- Handles type conversions and error cases
-
-### 2. Recursive Descent Parsing
-Parser methods correspond to grammar rules:
-- `parseExpression()` → handles operator precedence
-- `parseStatement()` → processes different statement types
-- `parseBlock()` → manages scoped statement groups
-
-### 3. Builder Pattern (LLVM Integration)
-Uses LLVM's IRBuilder for instruction generation:
-- Context management for LLVM types and constants
-- Module as container for generated functions
-- Builder for instruction sequencing
 
 ## Critical Implementation Decisions
 
@@ -348,9 +376,9 @@ Uses LLVM's IRBuilder for instruction generation:
 - **No Manual Memory**: Avoid raw pointers except for LLVM interfaces
 
 ### Error Handling
-- **Parse Errors**: Return nullptr from parsing methods
-- **Runtime Errors**: Use LLVM's error reporting mechanisms
-- **Type Errors**: Handled during code generation phase
+- **Exceptions-first**: Lexer/Parser/Type 오류는 예외로 보고
+- **Parse/Type Errors**: `ParseError`로 표준화된 위치 정보 포함
+- **CLI Diagnostics**: `<file>:<line>:<column>: error: ...` + 스니펫/캐럿 출력
 
 ### Symbol Management
 - **Global Scope**: Currently single scope for variables

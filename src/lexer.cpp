@@ -1,18 +1,38 @@
 #include "lexer.h"
+#include "parser.h" // For ParseError
 #include <cctype>
 #include <stdexcept>
 
-Lexer::Lexer(const std::string& input) : input(input), pos(0) {
+Lexer::Lexer(const std::string& input, std::string filename)
+    : input(input), filename(std::move(filename)), pos(0), currentChar('\0'), line(1), column(1) {
     currentChar = pos < input.length() ? input[pos] : '\0';
 }
 
 void Lexer::advance() {
-    pos++;
+    // handle CRLF and LF
+    if (currentChar == '\r') {
+        // if next char is \n, consume both but count as single newline
+        pos++;
+        if (pos < input.length() && input[pos] == '\n') {
+            pos++;
+        }
+        line += 1;
+        column = 1;
+    } else if (currentChar == '\n') {
+        pos++;
+        line += 1;
+        column = 1;
+    } else if (currentChar == '\0') {
+        // already at end
+    } else {
+        pos++;
+        column += 1;
+    }
     currentChar = pos < input.length() ? input[pos] : '\0';
 }
 
 void Lexer::skipWhitespace() {
-    while (currentChar != '\0' && std::isspace(currentChar)) {
+    while (currentChar != '\0' && std::isspace(static_cast<unsigned char>(currentChar))) {
         advance();
     }
 }
@@ -20,11 +40,11 @@ void Lexer::skipWhitespace() {
 void Lexer::skipComment() {
     if (currentChar == '/' && pos + 1 < input.length() && input[pos + 1] == '/') {
         // // 주석: 라인 끝까지 건너뛰기
-        while (currentChar != '\0' && currentChar != '\n') {
+        while (currentChar != '\0' && currentChar != '\n' && currentChar != '\r') {
             advance();
         }
-        // 개행 문자도 건너뛰기
-        if (currentChar == '\n') {
+        // 개행까지 소비 (advance가 줄바꿈 처리)
+        if (currentChar == '\n' || currentChar == '\r') {
             advance();
         }
     }
@@ -43,8 +63,8 @@ double Lexer::readNumber() {
             }
             hasDot = true;
         }
-        numStr += currentChar;
-        advance();
+    numStr += currentChar;
+    advance();
     }
     
     // Check for invalid formats like ending with dot
@@ -63,7 +83,7 @@ double Lexer::readNumber() {
 std::string Lexer::readIdentifier() {
     std::string identifier;
     
-    while (currentChar != '\0' && (std::isalnum(currentChar) || currentChar == '_')) {
+    while (currentChar != '\0' && (std::isalnum(static_cast<unsigned char>(currentChar)) || currentChar == '_' || (static_cast<unsigned char>(currentChar) >= 0x80))) {
         identifier += currentChar;
         advance();
     }
@@ -75,32 +95,31 @@ std::string Lexer::readString() {
     std::string str;
     advance(); // consume opening quote
     
-    while (currentChar != '\0' && currentChar != '"') {
+    while (true) {
+        // Unterminated if we hit end-of-file or newline before closing quote
+        if (currentChar == '\0' || currentChar == '\n' || currentChar == '\r') {
+            // AIDEV-NOTE: Report at currentLocation so caret points just after last char of the string.
+            throw ParseError("Unterminated string literal", currentLocation());
+        }
+        
+        if (currentChar == '"') {
+            break; // closing quote found
+        }
+        
         if (currentChar == '\\') {
             advance(); // consume backslash
-            if (currentChar == '\0') {
-                throw std::runtime_error("Unterminated string literal");
+            if (currentChar == '\0' || currentChar == '\n' || currentChar == '\r') {
+                throw ParseError("Unterminated string literal", currentLocation());
             }
-            
-            // Handle escape sequences
             switch (currentChar) {
-                case 'n':
-                    str += '\n';
-                    break;
-                case 't':
-                    str += '\t';
-                    break;
-                case 'r':
-                    str += '\r';
-                    break;
-                case '\\':
-                    str += '\\';
-                    break;
-                case '"':
-                    str += '"';
-                    break;
+                case 'n': str += '\n'; break;
+                case 't': str += '\t'; break;
+                case 'r': str += '\r'; break;
+                case '\\': str += '\\'; break;
+                case '"': str += '"'; break;
                 default:
-                    throw std::runtime_error("Invalid escape sequence in string literal");
+                    throw ParseError("Invalid escape sequence in string literal", currentLocation());
+                    // AIDEV-NOTE: Future: consider supporting hex/unicode escapes; keep simple for MVP.
             }
         } else {
             str += currentChar;
@@ -108,57 +127,57 @@ std::string Lexer::readString() {
         advance();
     }
     
-    if (currentChar != '"') {
-        throw std::runtime_error("Unterminated string literal");
-    }
-    
     advance(); // consume closing quote
     return str;
 }
 
-Token Lexer::handleKeywordOrIdentifier(const std::string& identifier) {
+Token Lexer::handleKeywordOrIdentifier(const std::string& identifier, const SourceRange& r) {
     if (identifier == "print") {
-        return Token(TOK_PRINT, identifier);
+        return Token(TOK_PRINT, identifier, 0.0, r);
     } else if (identifier == "if") {
-        return Token(TOK_IF, identifier);
+        return Token(TOK_IF, identifier, 0.0, r);
     } else if (identifier == "else") {
-        return Token(TOK_ELSE, identifier);
+        return Token(TOK_ELSE, identifier, 0.0, r);
     } else if (identifier == "while") {
-        return Token(TOK_WHILE, identifier);
+        return Token(TOK_WHILE, identifier, 0.0, r);
     }
-    return Token(TOK_IDENTIFIER, identifier);
+    return Token(TOK_IDENTIFIER, identifier, 0.0, r);
 }
 
-Token Lexer::handleOperator(char ch) {
+Token Lexer::handleOperator(char ch, const SourceLocation& startLoc) {
+    // we will advance as we consume
+    SourceLocation curStart = startLoc;
     advance();
     
     switch (ch) {
         case '+': case '-': case '*': case '/':
         case '(': case ')': case '{': case '}':
         case ';': case ',':
-            return Token(static_cast<TokenType>(ch), std::string(1, ch));
+            return Token(static_cast<TokenType>(ch), std::string(1, ch), 0.0,
+                         SourceRange{curStart, currentLocation()});
+    // AIDEV-NOTE: Single-char operators map directly to token type by ASCII code.
         case '=':
             if (currentChar == '=') {
                 advance();
-                return Token(TOK_EQ, "==");
+                return Token(TOK_EQ, "==", 0.0, SourceRange{curStart, currentLocation()});
             }
-            return Token(TOK_ASSIGN, "=");
+            return Token(TOK_ASSIGN, "=", 0.0, SourceRange{curStart, currentLocation()});
         case '>':
             if (currentChar == '=') {
                 advance();
-                return Token(TOK_GTE, ">=");
+                return Token(TOK_GTE, ">=", 0.0, SourceRange{curStart, currentLocation()});
             }
-            return Token(TOK_GT, ">");
+            return Token(TOK_GT, ">", 0.0, SourceRange{curStart, currentLocation()});
         case '<':
             if (currentChar == '=') {
                 advance();
-                return Token(TOK_LTE, "<=");
+                return Token(TOK_LTE, "<=", 0.0, SourceRange{curStart, currentLocation()});
             }
-            return Token(TOK_LT, "<");
+            return Token(TOK_LT, "<", 0.0, SourceRange{curStart, currentLocation()});
         case '!':
             if (currentChar == '=') {
                 advance();
-                return Token(TOK_NEQ, "!=");
+                return Token(TOK_NEQ, "!=", 0.0, SourceRange{curStart, currentLocation()});
             }
             throw std::runtime_error("Unknown character: !");
         default:
@@ -171,7 +190,8 @@ Token Lexer::getNextToken() {
         skipWhitespace();
         
         if (currentChar == '\0') {
-            return Token(TOK_EOF);
+            auto loc = currentLocation();
+            return Token(TOK_EOF, "", 0.0, SourceRange{loc, loc});
         }
         
         // 주석 확인 및 처리
@@ -182,21 +202,28 @@ Token Lexer::getNextToken() {
         
         break; // 주석이 아니면 토큰 처리 진행
     }
+    // record start location of the token
+    SourceLocation startLoc = currentLocation();
     
-    if (std::isdigit(currentChar)) {
+    if (std::isdigit(static_cast<unsigned char>(currentChar))) {
         double value = readNumber();
-        return Token(TOK_NUMBER, std::to_string(value), value);
+        return Token(TOK_NUMBER, std::to_string(value), value, SourceRange{startLoc, currentLocation()});
     }
     
-    if (std::isalpha(currentChar) || currentChar == '_') {
+    if (std::isalpha(static_cast<unsigned char>(currentChar)) || currentChar == '_' || (static_cast<unsigned char>(currentChar) >= 0x80)) {
         std::string identifier = readIdentifier();
-        return handleKeywordOrIdentifier(identifier);
+        return handleKeywordOrIdentifier(identifier, SourceRange{startLoc, currentLocation()});
     }
     
     if (currentChar == '"') {
-        std::string str = readString();
-        return Token(TOK_STRING, str);
+        try {
+            std::string str = readString();
+            return Token(TOK_STRING, str, 0.0, SourceRange{startLoc, currentLocation()});
+        } catch (const std::runtime_error& e) {
+            // Report lexer string errors at the current position (e.g., end of line for unterminated)
+            throw ParseError(e.what(), currentLocation());
+        }
     }
     
-    return handleOperator(currentChar);
+    return handleOperator(currentChar, startLoc);
 }
