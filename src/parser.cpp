@@ -40,7 +40,7 @@ std::unique_ptr<ExprAST> Parser::parseParenExpr() {
     if (!v) return nullptr;
     
     if (currentToken.type != TOK_RPAREN)
-    errorHere("Expected ')'"); // AIDEV-NOTE: Caret at current token to indicate missing ')'.
+        errorHere("Expected ')'");
     
     getNextToken(); // consume ')'
     return v;
@@ -156,7 +156,6 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
             if (currentToken.type != TOK_SEMICOLON) {
                 // Point to where ';' should be: end of the previous token
                 errorAt("Expected ';' after expression statement", previousToken.range.end);
-                // AIDEV-NOTE: Using previousToken.range.end so caret appears right after last expr token.
             }
             getNextToken(); // consume ';'
             
@@ -182,8 +181,7 @@ std::unique_ptr<ASTNode> Parser::parsePrintStatement() {
     
     if (currentToken.type != TOK_SEMICOLON) {
         // Point to where ';' should be: end of the previous token (end of last expr)
-    errorAt("Expected ';' after print statement", previousToken.range.end);
-    // AIDEV-NOTE: Align caret after last argument for clearer user guidance.
+        errorAt("Expected ';' after print statement", previousToken.range.end);
     }
     getNextToken(); // consume ';'
     
@@ -251,7 +249,7 @@ std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
 
 std::unique_ptr<ASTNode> Parser::parseBlock() {
     if (currentToken.type != TOK_LBRACE) {
-    errorHere("Expected '{'"); // AIDEV-NOTE: Blocks must start with '{'; error at current token.
+        errorHere("Expected '{'");
     }
     getNextToken(); // consume '{'
     
@@ -267,7 +265,7 @@ std::unique_ptr<ASTNode> Parser::parseBlock() {
     }
     
     if (currentToken.type != TOK_RBRACE) {
-    errorHere("Expected '}'"); // AIDEV-NOTE: Unterminated block; caret at unexpected token or EOF.
+        errorHere("Expected '}'");
     }
     getNextToken(); // consume '}'
     

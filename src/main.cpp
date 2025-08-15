@@ -120,13 +120,10 @@ void compileSource(const std::string& input, const std::string& filename) {
     }
 
     // 타입 체크 단계 추가
-    // AIDEV-NOTE: Type errors are wrapped as ParseError to unify formatting with parser errors.
-    // AIDEV-TODO: Propagate SourceRange from AST/type checker to avoid heuristic location guessing.
     try {
         typeCheck(programAST.get());
     } catch (const std::runtime_error& e) {
         // Best-effort: scan input to find a '+' on a non-comment line (ignoring leading whitespace)
-        // AIDEV-NOTE: Heuristic for caret placement on type errors; only scans '+'. Extend if needed.
         int errLine = 1;
         int errCol = 1;
         bool atLineStart = true;
@@ -163,7 +160,6 @@ void compileSource(const std::string& input, const std::string& filename) {
             }
         }
         // If not found, default to 1:1
-        // AIDEV-NOTE: Fallback location when operator not found; improves stability but may misplace caret.
         if (!found) { errLine = 1; errCol = 1; }
         throw ParseError(e.what(), SourceLocation{filename, errLine, errCol});
     }

@@ -98,7 +98,6 @@ std::string Lexer::readString() {
     while (true) {
         // Unterminated if we hit end-of-file or newline before closing quote
         if (currentChar == '\0' || currentChar == '\n' || currentChar == '\r') {
-            // AIDEV-NOTE: Report at currentLocation so caret points just after last char of the string.
             throw ParseError("Unterminated string literal", currentLocation());
         }
         
@@ -119,7 +118,6 @@ std::string Lexer::readString() {
                 case '"': str += '"'; break;
                 default:
                     throw ParseError("Invalid escape sequence in string literal", currentLocation());
-                    // AIDEV-NOTE: Future: consider supporting hex/unicode escapes; keep simple for MVP.
             }
         } else {
             str += currentChar;
@@ -155,7 +153,6 @@ Token Lexer::handleOperator(char ch, const SourceLocation& startLoc) {
         case ';': case ',':
             return Token(static_cast<TokenType>(ch), std::string(1, ch), 0.0,
                          SourceRange{curStart, currentLocation()});
-    // AIDEV-NOTE: Single-char operators map directly to token type by ASCII code.
         case '=':
             if (currentChar == '=') {
                 advance();
