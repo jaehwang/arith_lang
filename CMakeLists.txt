@@ -83,3 +83,8 @@ add_test(NAME ErrorDisplayTests COMMAND test_error_display)
 add_executable(test_integration_error_reporting tests/test_integration_error_reporting.cpp)
 target_link_libraries(test_integration_error_reporting arith_core ${llvm_libs} gtest_main gmock)
 add_test(NAME IntegrationErrorReportingTests COMMAND test_integration_error_reporting)
+
+# Mutability tests
+add_executable(test_mutability tests/test_mutability.cpp)
+target_link_libraries(test_mutability arith_core ${llvm_libs} gtest_main gmock)
+add_test(NAME MutabilityTests COMMAND test_mutability)

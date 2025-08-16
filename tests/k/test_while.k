@@ -1,7 +1,7 @@
 // EXPECTED: 3.000000000000000
 // EXPECTED: 2.000000000000000
 // EXPECTED: 1.000000000000000
-x = 3;
+mut x = 3;
 while (x) {
   print x;
   x = x - 1;

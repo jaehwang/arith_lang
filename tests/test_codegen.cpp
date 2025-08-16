@@ -236,14 +236,9 @@ TEST_F(CodeGenTest, IfStatementCodegen) {
     auto entry = llvm::BasicBlock::Create(getCodeGen().getContext(), "entry", func);
     getCodeGen().getBuilder().SetInsertPoint(entry);
     
-    getCodeGen().createVariable("result");
-    
     auto value = ifStmt->codegen();
     ASSERT_NE(value, nullptr);
-    
-    auto resultVar = getCodeGen().getVariable("result");
-    auto resultValue = getCodeGen().getBuilder().CreateLoad(llvm::Type::getDoubleTy(getCodeGen().getContext()), resultVar);
-    getCodeGen().getBuilder().CreateRet(resultValue);
+    getCodeGen().getBuilder().CreateRet(value);
     
     ASSERT_FALSE(llvm::verifyFunction(*func, &llvm::errs()));
     
@@ -298,10 +293,8 @@ TEST_F(CodeGenTest, BlockStatementCodegen) {
     
     auto value = block->codegen();
     ASSERT_NE(value, nullptr);
-    
-    auto resultVar = getCodeGen().getVariable("result");
-    auto resultValue = getCodeGen().getBuilder().CreateLoad(llvm::Type::getDoubleTy(getCodeGen().getContext()), resultVar);
-    getCodeGen().getBuilder().CreateRet(resultValue);
+    // The value of the block should be the last statement's value; return it directly
+    getCodeGen().getBuilder().CreateRet(value);
     
     ASSERT_FALSE(llvm::verifyFunction(*func, &llvm::errs()));
     

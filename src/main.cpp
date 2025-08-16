@@ -98,8 +98,9 @@ void setupLLVMFunction(const std::string& inputFile) {
     
     auto& codeGen = getCodeGen();
     
+    // Make main return i32 for proper process exit code (0 on success)
     llvm::FunctionType* funcType = llvm::FunctionType::get(
-        llvm::Type::getDoubleTy(codeGen.getContext()), false);
+        llvm::Type::getInt32Ty(codeGen.getContext()), false);
     llvm::Function* mainFunc = llvm::Function::Create(
         funcType, llvm::Function::ExternalLinkage, "main", codeGen.getModule());
     
@@ -122,6 +123,9 @@ void compileSource(const std::string& input, const std::string& filename) {
     // 타입 체크 단계 추가
     try {
         typeCheck(programAST.get());
+    } catch (const ParseError&) {
+        // Preserve location-rich parse errors from typeCheck
+        throw;
     } catch (const std::runtime_error& e) {
         // Best-effort: scan input to find a '+' on a non-comment line (ignoring leading whitespace)
         int errLine = 1;
@@ -151,8 +155,10 @@ void compileSource(const std::string& input, const std::string& filename) {
                 }
             }
             if (c == '\n') {
-                errLine++;
-                atLineStart = true;
+                if (!found) {
+                    errLine++;
+                    atLineStart = true;
+                }
                 continue;
             }
             if (c != '\r') {
@@ -170,9 +176,9 @@ void compileSource(const std::string& input, const std::string& filename) {
         throw std::runtime_error("코드 생성 실패");
     }
     
-    // 함수 종료 처리
+    // 함수 종료 처리: return 0 (i32)
     auto& codeGen = getCodeGen();
-    llvm::Value* zero = llvm::ConstantFP::get(codeGen.getContext(), llvm::APFloat(0.0));
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(codeGen.getContext()), 0);
     codeGen.getBuilder().CreateRet(zero);
 }
 

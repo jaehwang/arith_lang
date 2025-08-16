@@ -1,6 +1,7 @@
 #include "codegen.h"
 #include "ast.h"
 #include "lexer.h"
+#include "parser.h" // for ParseError
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/BasicBlock.h"
@@ -15,6 +16,8 @@ CodeGen::CodeGen(const std::string& moduleName, const std::string& sourceFile) :
     context = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>(moduleName, *context);
     builder = std::make_unique<llvm::IRBuilder<>>(*context);
+    // Initialize global scope
+    scopes.emplace_back();
     
     if (!sourceFileName.empty()) {
         module->setSourceFileName(sourceFileName);
@@ -22,23 +25,100 @@ CodeGen::CodeGen(const std::string& moduleName, const std::string& sourceFile) :
 }
 
 llvm::AllocaInst* CodeGen::createVariable(const std::string& name) {
-    llvm::Function* function = builder->GetInsertBlock()->getParent();
+    return declareVariable(name, /*is_mutable=*/false, SourceLocation{sourceFileName, 1, 1});
+}
+
+llvm::AllocaInst* CodeGen::declareVariable(const std::string& name, bool is_mutable,
+                                           const SourceLocation& loc) {
+    // Ensure we have a valid insertion point and function (unit tests may call without setup)
+    llvm::Function* function = nullptr;
+    if (auto* insertBB = builder->GetInsertBlock()) {
+        function = insertBB->getParent();
+    }
+    if (!function) {
+        // Create a private stub function and entry block for allocations
+        auto* funcTy = llvm::FunctionType::get(llvm::Type::getDoubleTy(*context), /*isVarArg=*/false);
+        function = llvm::Function::Create(
+            funcTy,
+            llvm::Function::InternalLinkage,
+            "__init",
+            *module
+        );
+        auto* entryBB = llvm::BasicBlock::Create(*context, "entry", function);
+        builder->SetInsertPoint(entryBB);
+    }
     llvm::IRBuilder<> tmpB(&function->getEntryBlock(), function->getEntryBlock().begin());
     llvm::AllocaInst* alloca = tmpB.CreateAlloca(llvm::Type::getDoubleTy(*context), nullptr, name);
-    namedValues[name] = alloca;
+    int scope_level = static_cast<int>(scopes.size()) - 1;
+    scopes.back()[name] = Symbol{name, alloca, is_mutable, true, loc, scope_level};
     return alloca;
 }
 
 llvm::AllocaInst* CodeGen::getVariable(const std::string& name) {
-    auto it = namedValues.find(name);
-    if (it != namedValues.end()) {
-        return it->second;
+    for (int i = static_cast<int>(scopes.size()) - 1; i >= 0; --i) {
+        auto it = scopes[i].find(name);
+    if (it != scopes[i].end()) return it->second.allocaInst;
     }
     return nullptr;
 }
 
 void CodeGen::setVariable(const std::string& name, llvm::AllocaInst* alloca) {
-    namedValues[name] = alloca;
+    int scope_level = static_cast<int>(scopes.size()) - 1;
+    scopes.back()[name] = Symbol{name, alloca, /*is_mutable=*/false, true,
+                                 SourceLocation{sourceFileName, 1, 1}, scope_level};
+}
+
+void CodeGen::enterScope() {
+    scopes.emplace_back();
+}
+
+void CodeGen::exitScope() {
+    if (!scopes.empty()) scopes.pop_back();
+    if (scopes.empty()) {
+        // Ensure there is always at least one scope to avoid edge cases
+        scopes.emplace_back();
+    }
+}
+
+bool CodeGen::canReassign(const std::string& name) const {
+    for (int i = static_cast<int>(scopes.size()) - 1; i >= 0; --i) {
+        auto it = scopes[i].find(name);
+        if (it != scopes[i].end()) return it->second.is_mutable;
+    }
+    return false;
+}
+
+bool CodeGen::canShadow(const std::string& /*name*/) const {
+    return true; // Language allows shadowing in inner scopes
+}
+
+const CodeGen::Symbol* CodeGen::lookupNearestSymbol(const std::string& name) const {
+    for (int i = static_cast<int>(scopes.size()) - 1; i >= 0; --i) {
+        auto it = scopes[i].find(name);
+        if (it != scopes[i].end()) return &it->second;
+    }
+    return nullptr;
+}
+
+const CodeGen::Symbol* CodeGen::lookupCurrentSymbol(const std::string& name) const {
+    if (scopes.empty()) return nullptr;
+    auto it = scopes.back().find(name);
+    if (it != scopes.back().end()) return &it->second;
+    return nullptr;
+}
+
+bool CodeGen::hasCurrentSymbol(const std::string& name) const {
+    return lookupCurrentSymbol(name) != nullptr;
+}
+
+bool CodeGen::isCurrentSymbolMutable(const std::string& name) const {
+    auto* s = lookupCurrentSymbol(name);
+    return s ? s->is_mutable : false;
+}
+
+llvm::AllocaInst* CodeGen::getCurrentAlloca(const std::string& name) const {
+    auto* s = lookupCurrentSymbol(name);
+    return s ? s->allocaInst : nullptr;
 }
 
 llvm::Function* CodeGen::getPrintfDeclaration() {
@@ -77,7 +157,8 @@ llvm::Value* NumberExprAST::codegen() {
 llvm::Value* VariableExprAST::codegen() {
     llvm::AllocaInst* alloca = codeGenInstance->getVariable(name);
     if (!alloca) {
-        throw std::runtime_error("Unknown variable name: " + name);
+    // Propagate as ParseError with identifier location for better diagnostics
+    throw ParseError("cannot find value '" + name + "' in this scope", name_location);
     }
     return codeGenInstance->getBuilder().CreateLoad(llvm::Type::getDoubleTy(codeGenInstance->getContext()), alloca, name);
 }
@@ -144,13 +225,36 @@ llvm::Value* BinaryExprAST::codegen() {
 llvm::Value* AssignmentExprAST::codegen() {
     llvm::Value* val = value->codegen();
     if (!val) return nullptr;
-    
-    llvm::AllocaInst* alloca = codeGenInstance->getVariable(varName);
-    if (!alloca) {
-        alloca = codeGenInstance->createVariable(varName);
+
+    // Determine how to handle binding based on mutability and scope
+    const bool isMutDecl = is_mutable_declaration;
+    llvm::AllocaInst* targetAlloca = nullptr;
+
+    if (isMutDecl) {
+        // Explicit mutable declaration: always create a new alloca in current scope
+        targetAlloca = codeGenInstance->declareVariable(varName, /*is_mutable=*/true,
+                        SourceLocation{codeGenInstance->getModule().getSourceFileName(), 1, 1});
+    } else {
+        // No 'mut'
+        if (codeGenInstance->hasCurrentSymbol(varName) && codeGenInstance->isCurrentSymbolMutable(varName)) {
+            // Mutation of existing mutable variable in current scope
+            targetAlloca = codeGenInstance->getCurrentAlloca(varName);
+        } else if (codeGenInstance->hasCurrentSymbol(varName)) {
+            // Shadowing: new immutable binding (redeclare in current scope)
+            targetAlloca = codeGenInstance->declareVariable(varName, /*is_mutable=*/false,
+                            SourceLocation{codeGenInstance->getModule().getSourceFileName(), 1, 1});
+        } else {
+            // Not present in current scope. If outer mutable exists, mutate it; otherwise, shadow with new immutable.
+            if (codeGenInstance->hasNearestSymbol(varName) && codeGenInstance->isNearestSymbolMutable(varName)) {
+                targetAlloca = codeGenInstance->getNearestAlloca(varName);
+            } else {
+                targetAlloca = codeGenInstance->declareVariable(varName, /*is_mutable=*/false,
+                                SourceLocation{codeGenInstance->getModule().getSourceFileName(), 1, 1});
+            }
+        }
     }
-    
-    codeGenInstance->getBuilder().CreateStore(val, alloca);
+
+    codeGenInstance->getBuilder().CreateStore(val, targetAlloca);
     return val;
 }
 
@@ -404,12 +508,13 @@ llvm::Value* WhileStmtAST::codegen() {
 
 llvm::Value* BlockAST::codegen() {
     llvm::Value* lastValue = nullptr;
-    
+    // Enter lexical scope for block
+    codeGenInstance->enterScope();
     for (const auto& stmt : statements) {
         lastValue = stmt->codegen();
         if (!lastValue) return nullptr;
     }
-    
+    codeGenInstance->exitScope();
     // Return the last statement's value, or 0.0 if no statements
     return lastValue ? lastValue : llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
 }

@@ -48,8 +48,9 @@ std::unique_ptr<ExprAST> Parser::parseParenExpr() {
 
 std::unique_ptr<ExprAST> Parser::parseIdentifierExpr() {
     std::string idName = currentToken.value;
+    SourceLocation idLoc = currentToken.range.start;
     getNextToken();
-    return std::make_unique<VariableExprAST>(idName);
+    return std::make_unique<VariableExprAST>(idName, idLoc);
 }
 
 std::unique_ptr<ExprAST> Parser::parseStringLiteral() {
@@ -124,12 +125,14 @@ std::unique_ptr<ExprAST> Parser::parseAssignment() {
         }
         
         std::string varName = varExpr->getName();
+        // location of variable name is in previousToken (identifier) when '=' is current
+        SourceLocation nameLoc = previousToken.range.start;
         getNextToken(); // consume '='
         
         auto rhs = parseExpression();
         if (!rhs) return nullptr;
         
-        return std::make_unique<AssignmentExprAST>(varName, std::move(rhs));
+        return std::make_unique<AssignmentExprAST>(varName, std::move(rhs), nameLoc);
     }
     
     // Not an assignment, parse as regular expression
@@ -148,6 +151,34 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
             return parseIfStatement();
         case TOK_WHILE:
             return parseWhileStatement();
+        case TOK_MUT: {
+            // Handle mutable variable declaration: mut x = value;
+            getNextToken(); // consume 'mut'
+            
+            if (currentToken.type != TOK_IDENTIFIER) {
+                errorHere("Expected variable name after 'mut'");
+            }
+            
+            std::string varName = currentToken.value;
+            SourceLocation nameLoc = currentToken.range.start;
+            getNextToken(); // consume identifier
+            
+            if (currentToken.type != TOK_ASSIGN) {
+                errorHere("Expected '=' after variable name in mutable declaration");
+            }
+            getNextToken(); // consume '='
+            
+            auto value = parseExpression();
+            if (!value) return nullptr;
+            
+            // Semicolon is required
+            if (currentToken.type != TOK_SEMICOLON) {
+                errorAt("Expected ';' after mutable variable declaration", previousToken.range.end);
+            }
+            getNextToken(); // consume ';'
+            
+            return std::make_unique<AssignmentExprAST>(varName, std::move(value), true, AssignmentType::DECLARATION, nameLoc);
+        }
         default: {
             auto expr = parseExpression();
             if (!expr) return nullptr;

@@ -138,6 +138,8 @@ Token Lexer::handleKeywordOrIdentifier(const std::string& identifier, const Sour
         return Token(TOK_ELSE, identifier, 0.0, r);
     } else if (identifier == "while") {
         return Token(TOK_WHILE, identifier, 0.0, r);
+    } else if (identifier == "mut") {
+        return Token(TOK_MUT, identifier, 0.0, r);
     }
     return Token(TOK_IDENTIFIER, identifier, 0.0, r);
 }

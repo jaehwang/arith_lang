@@ -2,10 +2,18 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include "lexer.h"
 
 namespace llvm {
     class Value;
 }
+
+// Variable assignment type classification
+enum class AssignmentType {
+    DECLARATION,     // First binding: x = 42 or mut x = 42
+    REASSIGNMENT,    // Subsequent assignment: x = 43 (only valid for mutable)
+    SHADOWING        // New immutable binding with same name
+};
 
 class ASTNode {
 public:
@@ -28,10 +36,13 @@ public:
 
 class VariableExprAST : public ExprAST {
     std::string name;
+    SourceLocation name_location{}; // location of identifier for diagnostics
 public:
     VariableExprAST(const std::string& name) : name(name) {}
+    VariableExprAST(const std::string& name, SourceLocation loc) : name(name), name_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     const std::string& getName() const { return name; }
+    const SourceLocation& getNameLocation() const { return name_location; }
 };
 
 class StringLiteralAST : public ExprAST {
@@ -68,12 +79,29 @@ public:
 class AssignmentExprAST : public ExprAST {
     std::string varName;
     std::unique_ptr<ExprAST> value;
+    bool is_mutable_declaration;
+    AssignmentType assignment_type;
+    SourceLocation name_location; // location of variable name for diagnostics
 public:
     AssignmentExprAST(const std::string& varName, std::unique_ptr<ExprAST> value)
-        : varName(varName), value(std::move(value)) {}
+        : varName(varName), value(std::move(value)), is_mutable_declaration(false), assignment_type(AssignmentType::DECLARATION), name_location{} {}
+    AssignmentExprAST(const std::string& varName, std::unique_ptr<ExprAST> value,
+                      SourceLocation loc)
+        : varName(varName), value(std::move(value)), is_mutable_declaration(false), assignment_type(AssignmentType::DECLARATION), name_location(std::move(loc)) {}
+    
+    AssignmentExprAST(const std::string& varName, std::unique_ptr<ExprAST> value, 
+                      bool is_mut, AssignmentType type)
+    : varName(varName), value(std::move(value)), is_mutable_declaration(is_mut), assignment_type(type), name_location{} {}
+    AssignmentExprAST(const std::string& varName, std::unique_ptr<ExprAST> value, 
+                      bool is_mut, AssignmentType type, SourceLocation loc)
+        : varName(varName), value(std::move(value)), is_mutable_declaration(is_mut), assignment_type(type), name_location(std::move(loc)) {}
+    
     llvm::Value* codegen() override;
     const std::string& getVarName() const { return varName; }
     ExprAST* getValue() const { return value.get(); }
+    bool isMutableDeclaration() const { return is_mutable_declaration; }
+    AssignmentType getAssignmentType() const { return assignment_type; }
+    const SourceLocation& getNameLocation() const { return name_location; }
 };
 
 class PrintStmtAST : public ASTNode {

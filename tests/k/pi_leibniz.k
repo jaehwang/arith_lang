@@ -1,7 +1,9 @@
-pi_over_4 = 0.0;
-denominator = 1.0;
-sign = 1.0;
-iterations = 0;
+// EXPECTED: 3.141492653590034
+
+mut pi_over_4 = 0.0;
+mut denominator = 1.0;
+mut sign = 1.0;
+mut iterations = 0;
 
 while (iterations < 10000) {
     term = sign / denominator;
