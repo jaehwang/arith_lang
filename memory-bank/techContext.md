@@ -134,7 +134,7 @@ All commits must follow the standardized template defined in `rules/commit_log.m
 ### Code Generation Strategy
 - **Target**: Generic LLVM IR (platform-independent)
 - **Function Model**: Single main function containing all statements
-- **Type System**: Primarily double-precision floating point
+- **Type System**: Minimal compile-time checks (Number, String) for validation; codegen uses double-precision numbers
 - **Memory Model**: Stack-allocated variables via alloca
 
 ## Testing Strategy
@@ -243,7 +243,7 @@ TEST_F(ComponentTest, InvalidInput_ThrowsException) {
 
 ### Technical Constraints
 - **Single Scope**: No nested scoping or functions
-- **Type System**: Only double precision floating point
+- **Type System**: Minimal compile-time categories (Number/String); runtime representation in codegen is double only
 - **Memory Management**: Simple stack allocation only
 - **Error Recovery**: Limited error recovery in parser
 

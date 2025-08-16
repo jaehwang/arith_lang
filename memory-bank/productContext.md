@@ -65,6 +65,7 @@ The compiler has been successfully validated with practical mathematical computa
 ## Language Specification
 - **Grammar Definition**: Complete BNF grammar specification available in `specs/syntax.md`
 - **Print Statement Specification**: Comprehensive printf-like functionality detailed in `specs/print.md`
+- **Variable System**: Immutable-by-default with explicit `mut` for mutation; shadowing supported. See `specs/variables.md` for current status and roadmap.
 - **Formal Syntax**: Defines all language constructs including:
   - Arithmetic expressions with proper operator precedence
   - Variable assignment and usage

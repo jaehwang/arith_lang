@@ -25,7 +25,8 @@ All compiler phases are **fully implemented and optimized**:
    - **String Type Safety**: Prevents string literals in arithmetic/comparison operations
    - **Comprehensive Coverage**: Validates all AST node types recursively
    - **Production Integration**: Fully integrated into main compiler pipeline
-   - **Status**: All type safety validations passing
+  - **Status**: All type safety validations passing
+  - **Mutability Rules**: Immutable-by-default with explicit `mut`; mutation enforces type consistency (Number/String), shadowing allows type changes
 
 4. **AST (Abstract Syntax Tree)** ✅
    - Full node hierarchy for expressions and statements
@@ -76,6 +77,11 @@ All compiler phases are **fully implemented and optimized**:
   - **Comprehensive Validation**: All AST node types validated recursively with 100% coverage
   - **Production Ready**: Fully integrated and tested in main compiler pipeline
 - **100% Negative Test Success** ✅: **PERFECT ACHIEVEMENT** - All error detection working flawlessly
+- **Variable Mutability System** ✅ **NEW**
+  - Implemented immutable-by-default variables with explicit `mut`
+  - Clear diagnostics with file:line:col, caret, note/help for reassignment/type errors/undefined variables
+  - Added unit/integration tests: shadowing, scope, type mismatch mutation
+  - Updated `specs/variables.md` with implementation status and roadmap
   - **Perfect Coverage**: **91/91 negative test cases passing** (100% success rate achieved)
   - **Complete Validation**: **ALL** syntax error categories properly detected and handled
   - **Type Safety**: All string literal type violations caught and reported with clear errors

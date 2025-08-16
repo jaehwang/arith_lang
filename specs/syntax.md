@@ -13,7 +13,8 @@
 
 <block>         ::= "{" <statement>* "}"
 
-<assignment>   ::= <identifier> "=" <expression>
+<assignment>   ::= <mut_qualifier>? <identifier> "=" <expression>
+<mut_qualifier>::= "mut"
 
 <expression>   ::= <comparison> ( ("+" | "-") <comparison> )*
 
@@ -68,8 +69,10 @@ The unary minus operator has higher precedence than all binary operators:
 - Return 1.0 for true, 0.0 for false
 
 ### Variables
-- Assignment: `variable = expression;`
-- Reference: use variable name in expressions
+- Immutable-by-default declaration: `x = 42;`
+- Mutable declaration with `mut`: `mut i = 0; i = i + 1;`
+- Shadowing allowed: `x = x + 5;` (새 바인딩 생성)
+- 참고: 상세 의미론 및 에러 메시지는 `specs/variables.md` 참조
 
 ### Control Flow
 - **If statements**: `if (condition) { ... } else { ... }`
@@ -90,6 +93,10 @@ The unary minus operator has higher precedence than all binary operators:
 ## Example Program
 
 ```
+// Mutable variable example
+mut i = 0;
+i = i + 1;
+
 // Calculate using unary minus
 x = -1.0;           // Negative assignment
 y = -x;             // Negation of variable  

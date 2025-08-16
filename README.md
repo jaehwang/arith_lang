@@ -12,7 +12,7 @@ ArithLang은 LLVM을 사용하여 산술 표현식을 실행 가능한 코드로
 - 비교 연산: >, <, >=, <=, ==, !=
 - 괄호를 이용한 연산 우선순위 제어
 - 부동소수점 숫자 지원 (15자리 고정밀도)
-- 변수 할당 및 사용 (x = 1)
+- 변수: 기본 불변(immutable), `mut`로 가변 선언 및 사용 (예: `x = 1`, `mut i = 0`)
 - **고급 Print 문 지원**:
   - 문자열 리터럴: `print "Hello, World!";`
   - C-style 포맷 문자열: `print "Value: %.2f", x;`
@@ -29,12 +29,13 @@ ArithLang은 LLVM을 사용하여 산술 표현식을 실행 가능한 코드로
 
 [Syntax](specs/syntax.md) 문서를 참조하여 ArithLang의 문법을 확인할 수 있습니다.
 [Print Statement Specification](specs/print.md) 문서에서 고급 printf-like 출력 기능의 상세한 명세를 확인할 수 있습니다.
+[`Variable System`](specs/variables.md) 문서에서 불변-기본 변수 시스템과 `mut` 키워드 명세를 확인하세요.
 
 ### 지원되는 문법 요소
 
 - **산술 연산**: `+`, `-`, `*`, `/` (우선순위 지원)
 - **비교 연산**: `>`, `<`, `>=`, `<=`, `==`, `!=`
-- **변수**: 할당 및 참조 (`x = 42`)
+- **변수**: 기본 불변, `mut`로 가변 선언 및 참조 (`x = 42`, `mut i = 0`)
 - **출력**: 고급 `print` 문 
   - 기본: `print x;` (15자리 정밀도, 자동 개행)
   - 문자열: `print "Hello";` (개행 없음)

@@ -9,6 +9,15 @@ The ArithLang compiler has **FULLY ACHIEVED** complete negative test suite succe
 - **✅ Production-Ready Error Handling**: Complete systematic type safety and syntax validation
 - **✅ String Type Safety**: All string literal type violations properly detected and prevented
 
+## Update (2025-08-17): Variable Mutability System (mut) ✅
+
+- ✅ Immutable-by-default 변수 시스템 구현, `mut` 키워드로 명시적 가변 선언
+- ✅ 섀도잉 vs. 뮤테이션 규칙 정립
+  - 섀도잉: 새 바인딩으로 타입 변경 허용
+  - 뮤테이션: 동일 바인딩에서 타입 일관성(Number/String) 강제
+- ✅ 진단 품질 향상: `<file>:<line>:<col>: error: ...` + 소스 라인 + `^` caret + `note`/`help`
+- ✅ 테스트/문서: .k 통합 테스트와 단위 테스트 추가, `specs/variables.md`에 현재 상태 및 로드맵 반영
+
 ## Update (2025-08-15): Parse Error Reporting & Anchors ✅
 
 - ✅ GCC-style diagnostics implemented for parse/type errors
