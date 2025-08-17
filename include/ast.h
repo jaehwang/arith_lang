@@ -28,10 +28,13 @@ public:
 
 class NumberExprAST : public ExprAST {
     double val;
+    SourceLocation literal_location; // location of number literal for diagnostics
 public:
-    NumberExprAST(double val) : val(val) {}
+    NumberExprAST(double val) : val(val), literal_location{} {}
+    NumberExprAST(double val, SourceLocation loc) : val(val), literal_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     double getValue() const { return val; }
+    const SourceLocation& getLiteralLocation() const { return literal_location; }
 };
 
 class VariableExprAST : public ExprAST {
@@ -47,10 +50,13 @@ public:
 
 class StringLiteralAST : public ExprAST {
     std::string value;
+    SourceLocation literal_location; // location of string literal for diagnostics
 public:
-    StringLiteralAST(const std::string& value) : value(value) {}
+    StringLiteralAST(const std::string& value) : value(value), literal_location{} {}
+    StringLiteralAST(const std::string& value, SourceLocation loc) : value(value), literal_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     const std::string& getValue() const { return value; }
+    const SourceLocation& getLiteralLocation() const { return literal_location; }
 };
 
 class UnaryExprAST : public ExprAST {
@@ -115,13 +121,19 @@ public:
 class PrintStmtAST : public ASTNode {
     std::unique_ptr<ExprAST> formatExpr;
     std::vector<std::unique_ptr<ExprAST>> args;
+    SourceLocation print_location; // location of 'print' keyword for diagnostics
 public:
-    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr) : formatExpr(std::move(formatExpr)) {}
+    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr) : formatExpr(std::move(formatExpr)), print_location{} {}
     PrintStmtAST(std::unique_ptr<ExprAST> formatExpr, std::vector<std::unique_ptr<ExprAST>> args) 
-        : formatExpr(std::move(formatExpr)), args(std::move(args)) {}
+        : formatExpr(std::move(formatExpr)), args(std::move(args)), print_location{} {}
+    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr, SourceLocation loc)
+        : formatExpr(std::move(formatExpr)), print_location(std::move(loc)) {}
+    PrintStmtAST(std::unique_ptr<ExprAST> formatExpr, std::vector<std::unique_ptr<ExprAST>> args, SourceLocation loc) 
+        : formatExpr(std::move(formatExpr)), args(std::move(args)), print_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     ExprAST* getFormatExpr() const { return formatExpr.get(); }
     const std::vector<std::unique_ptr<ExprAST>>& getArgs() const { return args; }
+    const SourceLocation& getPrintLocation() const { return print_location; }
     
     // Backward compatibility
     ExprAST* getExpr() const { return formatExpr.get(); }
@@ -131,30 +143,46 @@ class IfStmtAST : public ASTNode {
     std::unique_ptr<ExprAST> condition;
     std::unique_ptr<ASTNode> thenStmt;
     std::unique_ptr<ASTNode> elseStmt;
+    SourceLocation if_location; // location of 'if' keyword for diagnostics
 public:
     IfStmtAST(std::unique_ptr<ExprAST> condition, 
               std::unique_ptr<ASTNode> thenStmt,
               std::unique_ptr<ASTNode> elseStmt)
         : condition(std::move(condition)), 
           thenStmt(std::move(thenStmt)), 
-          elseStmt(std::move(elseStmt)) {}
+          elseStmt(std::move(elseStmt)), if_location{} {}
+    IfStmtAST(std::unique_ptr<ExprAST> condition, 
+              std::unique_ptr<ASTNode> thenStmt,
+              std::unique_ptr<ASTNode> elseStmt,
+              SourceLocation loc)
+        : condition(std::move(condition)), 
+          thenStmt(std::move(thenStmt)), 
+          elseStmt(std::move(elseStmt)), if_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     ExprAST* getCondition() const { return condition.get(); }
     ASTNode* getThenStmt() const { return thenStmt.get(); }
     ASTNode* getElseStmt() const { return elseStmt.get(); }
+    const SourceLocation& getIfLocation() const { return if_location; }
 };
 
 class WhileStmtAST : public ASTNode {
     std::unique_ptr<ExprAST> condition;
     std::unique_ptr<ASTNode> body;
+    SourceLocation while_location; // location of 'while' keyword for diagnostics
 public:
     WhileStmtAST(std::unique_ptr<ExprAST> condition, 
                  std::unique_ptr<ASTNode> body)
         : condition(std::move(condition)), 
-          body(std::move(body)) {}
+          body(std::move(body)), while_location{} {}
+    WhileStmtAST(std::unique_ptr<ExprAST> condition, 
+                 std::unique_ptr<ASTNode> body,
+                 SourceLocation loc)
+        : condition(std::move(condition)), 
+          body(std::move(body)), while_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     ExprAST* getCondition() const { return condition.get(); }
     ASTNode* getBody() const { return body.get(); }
+    const SourceLocation& getWhileLocation() const { return while_location; }
 };
 
 class BlockAST : public ASTNode {

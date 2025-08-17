@@ -29,7 +29,7 @@ int Parser::getTokenPrecedence() {
 }
 
 std::unique_ptr<ExprAST> Parser::parseNumberExpr() {
-    auto result = std::make_unique<NumberExprAST>(currentToken.numValue);
+    auto result = std::make_unique<NumberExprAST>(currentToken.numValue, currentToken.range.start);
     getNextToken();
     return std::move(result);
 }
@@ -56,7 +56,7 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr() {
 std::unique_ptr<ExprAST> Parser::parseStringLiteral() {
     std::string strValue = currentToken.value;
     getNextToken();
-    return std::make_unique<StringLiteralAST>(strValue);
+    return std::make_unique<StringLiteralAST>(strValue, currentToken.range.start);
 }
 
 std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
@@ -198,6 +198,7 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
 }
 
 std::unique_ptr<ASTNode> Parser::parsePrintStatement() {
+    SourceLocation printLoc = currentToken.range.start;
     getNextToken(); // consume 'print'
     
     auto firstExpr = parseExpression();
@@ -219,13 +220,14 @@ std::unique_ptr<ASTNode> Parser::parsePrintStatement() {
     getNextToken(); // consume ';'
     
     if (args.empty()) {
-        return std::make_unique<PrintStmtAST>(std::move(firstExpr));
+        return std::make_unique<PrintStmtAST>(std::move(firstExpr), printLoc);
     } else {
-        return std::make_unique<PrintStmtAST>(std::move(firstExpr), std::move(args));
+        return std::make_unique<PrintStmtAST>(std::move(firstExpr), std::move(args), printLoc);
     }
 }
 
 std::unique_ptr<ASTNode> Parser::parseIfStatement() {
+    SourceLocation ifLoc = currentToken.range.start;
     getNextToken(); // consume 'if'
     
     if (currentToken.type != TOK_LPAREN) {
@@ -254,10 +256,11 @@ std::unique_ptr<ASTNode> Parser::parseIfStatement() {
     }
     return std::make_unique<IfStmtAST>(std::move(condition), 
                                        std::move(thenBlock), 
-                                       std::move(elseBlock));
+                                       std::move(elseBlock), ifLoc);
 }
 
 std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
+    SourceLocation whileLoc = currentToken.range.start;
     getNextToken(); // consume 'while'
     
     if (currentToken.type != TOK_LPAREN) {
@@ -277,7 +280,7 @@ std::unique_ptr<ASTNode> Parser::parseWhileStatement() {
     if (!body) return nullptr;
     
     return std::make_unique<WhileStmtAST>(std::move(condition), 
-                                          std::move(body));
+                                          std::move(body), whileLoc);
 }
 
 std::unique_ptr<ASTNode> Parser::parseBlock() {

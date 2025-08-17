@@ -80,9 +80,7 @@ ValueType inferExprType(ExprAST* expr, TypeEnv& env, const std::string& filename
     if (auto unary = dynamic_cast<UnaryExprAST*>(expr)) {
         auto t = inferExprType(unary->getOperand(), env, filename);
         if (t == ValueType::String) {
-            const auto& opLoc = unary->getOperatorLocation();
-            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
-            throw ParseError("String literal cannot be used in unary operation", errorLoc);
+            throw ParseError("String literal cannot be used in unary operation", unary->getOperatorLocation());
         }
         return ValueType::Number;
     }
@@ -91,14 +89,10 @@ ValueType inferExprType(ExprAST* expr, TypeEnv& env, const std::string& filename
         auto lt = inferExprType(bin->getLHS(), env, filename);
         auto rt = inferExprType(bin->getRHS(), env, filename);
         if (lt == ValueType::String) {
-            const auto& opLoc = bin->getOperatorLocation();
-            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
-            throw ParseError("String literal cannot be used in binary operation (left operand)", errorLoc);
+            throw ParseError("String literal cannot be used in binary operation (left operand)", bin->getOperatorLocation());
         }
         if (rt == ValueType::String) {
-            const auto& opLoc = bin->getOperatorLocation();
-            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
-            throw ParseError("String literal cannot be used in binary operation (right operand)", errorLoc);
+            throw ParseError("String literal cannot be used in binary operation (right operand)", bin->getOperatorLocation());
         }
         return ValueType::Number;
     }
