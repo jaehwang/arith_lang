@@ -1,19 +1,19 @@
 # HOWTO: AI 도구 협업으로 대규모 작업(Task) 수행하기
 
-이 문서의 목적은 AI를 이용한 개발에서 큰 Task를 Sub Task로 나눠 진행하기 위한 효과적인 방법론을 제시하는 것입니다. `specs/variables.md`, `plans/mut-implementation-plan.md` 등의 파일을 사례로 이 방법론을 소개합니다. Sub Task 간의 '의도 이탈(drift)' 문제를 해결하기 위해 명세(spec)를 '단일한 진실의 원천(Single Source of Truth)'으로 삼고 각 작업 단계마다 이를 기준으로 일관성을 유지하는 것이 핵심입니다.
+이 문서의 목적은 AI를 이용한 개발에서 큰 Task를 Sub Task로 나눠 진행하기 위한 효과적인 방법론을 제시하는 것입니다. [`specs/variables.md`](specs/variables.md), [`plans/mut-implementation-plan.md`](plans/mut-implementation-plan.md) 등의 파일을 사례로 이 방법론을 소개합니다. Sub Task 간의 '의도 이탈(drift)' 문제를 해결하기 위해 명세(spec)를 '단일한 진실의 원천(Single Source of Truth)'으로 삼고 각 작업 단계마다 이를 기준으로 일관성을 유지하는 것이 핵심입니다.
 
 ## 1) 배경: Context Engineering의 필요성과 '의도 이탈' 문제
 
-AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(context)을 어떻게 해석하는지에 따라 결과가 달라질 수 있습니다. 여러 도구와 단계가 얽힌 대규모 작업에서는, 맥락 전달이 불충분하거나 일관되지 않으면 초기 의도에서 벗어나는 '의도 이탈(drift)' 문제가 빈번하게 발생합니다. 예를 들어, `plans/mut-implementation-plan.md`와 같은 계획 문서만을 기준으로 삼을 경우, 도구별 해석 차이로 인해 최종 산출물이 원본 명세(`specs/variables.md`)와 달라질 위험이 있습니다.
+> Keeping agents on track through long, complex tasks. [Cline](https://www.linkedin.com/posts/clinebot_cline-v325-is-live-addressing-the-biggest-ugcPost-7362148463586783232-NT_x?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAEzDxcBAW1X5QEW8rSPInqKRgAXWRGOYfk)
 
-이러한 문제를 해결하기 위해서는, **Context Engineering**—즉, 작업의 기준이 되는 명세와 현재 맥락을 모든 도구와 단계에 명확히 주입하고, 지속적으로 동기화하는 체계적인 워크플로가 필수적입니다. 본 가이드는 원본 명세를 단일한 진실의 원천(SoT)으로 삼고, 각 단계마다 명세와 맥락을 반복적으로 주입·검증하는 방법론을 제시합니다.
+AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(context)을 어떻게 해석하는지에 따라 결과가 달라질 수 있습니다. 여러 도구와 단계가 얽힌 대규모 작업에서는, 맥락 전달이 불충분하거나 일관되지 않으면 초기 의도에서 벗어나는 '의도 이탈(drift)' 문제가 빈번하게 발생합니다. 
 
 ---
 
 ## 2) 핵심 원칙
 
-1.  **단일 진실의 원천(SoT)**: 원래 명세 파일(specs/variables.md)을 최우선 참조한다.
-2.  **계획은 보조물**: `plans/mut-implementation-plan.md`는 구현 순서와 커버리지 체크 용도로 사용하되, 충돌 시 spec이 우선한다.
+1.  **단일 진실의 원천(SoT)**: 명세 파일(e.g. specs/variables.md)을 최우선 참조한다.
+2.  **Sub Task**: 명세를 구현하기 위한 Sub Task를 바탕으로 계획을 작성한다.
 3.  **단계 경계 = 커밋 경계**: 각 sub task가 끝날 때마다 커밋한다. 커밋 메시지에는 해당 작업이 참조한 spec, 계획 단계, 테스트 범위를 명확히 기록한다.
 5.  **지속적 드리프트 감지**: 테스트 케이스는 사람이 직접 작성하거나 AI가 생성할 수 있다. 생성된 테스트 케이스가 명세(spec)에 부합하는지 반드시 사람이 리뷰하여 드리프트를 감지한다.
 6.  **도구 및 Sub Task 전환 시 일관성 유지**: 도구 간 또는 Sub Task 간 전환에서는 AGENTS.md, rules/anchor-comments.md, rules/commit-log.md 등 프로젝트 규칙을 통해 일관성을 유지한다.
@@ -24,9 +24,9 @@ AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(contex
 ## 3) 전체 워크플로 개요
 
 * 준비
-  - SoT 지정: specs/variables.md. 요구 사항, 설계, 테스트 케이스 등을 포함한 명세 파일을 단일한 진실의 원천으로 삼는다.
-  - 계획 수립: `plans/mut-implementation-plan.md`. Sub Task들을 도출하고 구현 순서를 작성한다.
-  - 프로젝트 규칙 준수: AGENTS.md, rules/anchor-comments.md, rules/commit-log.md
+  - SoT 지정: specs/variables.md을 작성한다. AI를 이용해 작성한 후 리뷰하는 방식을 권장한다. 요구 사항, 설계, 테스트 케이스 등을 포함한 명세 파일을 단일한 진실의 원천으로 삼는다.
+  - 계획 수립: `plans/mut-implementation-plan.md`. Sub Task들을 도출하고 구현 순서를 작성한다. 이 문서 역시 AI로 작성하고 사람이 리뷰하는 방식을 권장한다.
+  - 프로젝트 규칙 준수: AGENTS.md, rules/anchor-comments.md, rules/commit-log.md, memory-bank/ 등 AI가 준수해야 하는 규칙을 명확히 한다. 
 
 * 실행 루프(각 단계 반복)
   1) Sub Task 구현/리팩토링
@@ -75,3 +75,39 @@ AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(contex
 ## 5) 참고 
 
 * [Cline의 Deep Planning](https://docs.cline.bot/features/slash-commands/deep-planning)
+
+---
+
+## 부록: AI의 장기 작업을 위한 5계층 컨텍스트 관리 시스템
+
+이 부록은 AI 에이전트의 '의도 이탈' 문제를 체계적으로 해결하기 위한 심층적인 프레임워크를 제안합니다.
+
+### A.1) 핵심 개념: 5계층 컨텍스트 생태계
+
+의도 이탈을 효과적으로 방지하기 위해, 우리는 5개의 독립적이지만 상호 연결된 컨텍스트 계층으로 구성된 '생태계'를 활용합니다. 각 계층은 작업의 다른 측면을 책임지며, 전체적인 일관성을 유지합니다.
+
+*   **1. 전략 계층 (Memory Bank)**: **왜(Why)** 이 프로젝트가 존재하는가? 프로젝트의 장기적인 목표, 상태, 아키텍처 패턴을 정의합니다. 세션을 넘나드는 영구적인 기억의 역할을 합니다.
+*   **2. 명세 계층 (`specs/`)**: **무엇을(What)** 만들어야 하는가? 기능의 요구사항, 설계, 테스트 케이스를 상세히 기술하는 '단일 진실의 원천(SoT)'입니다.
+*   **3. 계획 계층 (`plans/`)**: **어떻게(How)** 만들 것인가? 명세를 구현 가능한 Sub Task로 나누고, 작업 순서와 범위를 정의하는 실행 계획입니다. 계획은 명세의 하위 개념이며, 명세가 변경되면 계획도 변경될 수 있습니다.
+*   **4. 구현 계층 (Source Code + Tests)**: **실제 구현(Implementation)**. 명세와 계획에 따라 작성된 소스 코드와, 해당 코드가 명세에 부합하는지 검증하는 테스트 코드로 구성됩니다. 테스트는 구현이 의도에서 벗어나지 않았는지 확인하는 핵심적인 장치입니다.
+*   **5. 이력 계층 (Commit Logs)**: **변경 기록(History)**. 코드 변경 사항을 명세 및 계획과 연결하여 기록하는 감사 가능한 역사입니다. "무엇을 왜 바꿨는지"를 명확히 하여 추적성을 확보합니다.
+
+### A.2) 실전 워크플로: 5계층 모델 활용법
+
+AI 에이전트가 복잡한 작업을 수행할 때 따라야 할 구체적인 절차는 다음과 같습니다.
+
+*   **1단계: 세션 시작 (전략 파악)**
+    1.  `AGENTS.md`를 읽고 해당 프로젝트의 규칙을 숙지합니다.
+    2.  **전략 계층**: `memory-bank/` 전체를 검토하여 프로젝트의 큰 그림과 현재 상태를 파악합니다.
+
+*   **2단계: 작업 착수 (명세와 계획 수립)**
+    1.  **명세 계층**: `activeContext.md`를 바탕으로 작업할 기능의 `specs/*.md`를 작성하거나 검토합니다. (AI 초안 작성 후 리뷰 권장)
+    2.  **계획 계층**: 확정된 명세를 바탕으로 `plans/*.md` 구현 계획을 수립합니다. Sub Task를 정의하고 작업 순서를 정합니다.
+
+*   **3단계: Sub Task 실행 (구현 및 검증)**
+    1.  **구현 계층**: 계획에 따라 소스 코드를 작성합니다.
+    2.  명세에 정의된 테스트 케이스를 기반으로 테스트를 작성하고 실행하여, 구현이 의도에서 벗어나지 않았는지 검증합니다.
+
+*   **4단계: 작업 완료 (이력 기록 및 동기화)**
+    1.  **이력 계층**: `rules/commit-log.md` 규칙에 따라, 변경 사항이 어떤 명세와 계획에 기반했는지 명시하여 **커밋**합니다.
+    2.  **전략 계층**: `progress.md`와 `activeContext.md`를 업데이트하여 프로젝트의 진행 상황을 **메모리 뱅크**에 최종적으로 동기화합니다.
