@@ -53,10 +53,10 @@ private:
 
 const char* toTypeName(ValueType t) { return t == ValueType::Number ? "number" : "string"; }
 
-void typeCheckNode(ASTNode* node, TypeEnv& env);
+void typeCheckNode(ASTNode* node, TypeEnv& env, const std::string& filename);
 
 // Infer expression type and validate subexpressions
-ValueType inferExprType(ExprAST* expr, TypeEnv& env) {
+ValueType inferExprType(ExprAST* expr, TypeEnv& env, const std::string& filename) {
     if (!expr) return ValueType::Number;
 
     if (auto num = dynamic_cast<NumberExprAST*>(expr)) {
@@ -78,21 +78,27 @@ ValueType inferExprType(ExprAST* expr, TypeEnv& env) {
     }
 
     if (auto unary = dynamic_cast<UnaryExprAST*>(expr)) {
-        auto t = inferExprType(unary->getOperand(), env);
+        auto t = inferExprType(unary->getOperand(), env, filename);
         if (t == ValueType::String) {
-            throw std::runtime_error("String literal cannot be used in unary operation");
+            const auto& opLoc = unary->getOperatorLocation();
+            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
+            throw ParseError("String literal cannot be used in unary operation", errorLoc);
         }
         return ValueType::Number;
     }
 
     if (auto bin = dynamic_cast<BinaryExprAST*>(expr)) {
-        auto lt = inferExprType(bin->getLHS(), env);
-        auto rt = inferExprType(bin->getRHS(), env);
+        auto lt = inferExprType(bin->getLHS(), env, filename);
+        auto rt = inferExprType(bin->getRHS(), env, filename);
         if (lt == ValueType::String) {
-            throw std::runtime_error("String literal cannot be used in binary operation (left operand)");
+            const auto& opLoc = bin->getOperatorLocation();
+            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
+            throw ParseError("String literal cannot be used in binary operation (left operand)", errorLoc);
         }
         if (rt == ValueType::String) {
-            throw std::runtime_error("String literal cannot be used in binary operation (right operand)");
+            const auto& opLoc = bin->getOperatorLocation();
+            SourceLocation errorLoc = opLoc.file.empty() ? SourceLocation{filename, 1, 1} : opLoc;
+            throw ParseError("String literal cannot be used in binary operation (right operand)", errorLoc);
         }
         return ValueType::Number;
     }
@@ -100,11 +106,11 @@ ValueType inferExprType(ExprAST* expr, TypeEnv& env) {
     return ValueType::Number;
 }
 
-void typeCheckExpr(ExprAST* expr, TypeEnv& env) {
-    (void)inferExprType(expr, env);
+void typeCheckExpr(ExprAST* expr, TypeEnv& env, const std::string& filename) {
+    (void)inferExprType(expr, env, filename);
 }
 
-void typeCheckNode(ASTNode* node, TypeEnv& env) {
+void typeCheckNode(ASTNode* node, TypeEnv& env, const std::string& filename) {
     if (!node) return;
 
     // Expression-only nodes
@@ -112,7 +118,7 @@ void typeCheckNode(ASTNode* node, TypeEnv& env) {
         // Handle assignments specially
     if (auto assign = dynamic_cast<AssignmentExprAST*>(expr)) {
             // First infer RHS expression type (validates subexpressions)
-            ValueType rhsType = inferExprType(assign->getValue(), env);
+            ValueType rhsType = inferExprType(assign->getValue(), env, filename);
 
             const std::string& name = assign->getVarName();
             bool isMutDecl = assign->isMutableDeclaration();
@@ -180,38 +186,38 @@ void typeCheckNode(ASTNode* node, TypeEnv& env) {
         }
 
         // All other expressions
-        typeCheckExpr(expr, env);
+        typeCheckExpr(expr, env, filename);
         return;
     }
 
     // Print statement
     if (auto print = dynamic_cast<PrintStmtAST*>(node)) {
-        typeCheckExpr(print->getFormatExpr(), env);
+        typeCheckExpr(print->getFormatExpr(), env, filename);
         for (const auto& arg : print->getArgs()) {
-            typeCheckExpr(arg.get(), env);
+            typeCheckExpr(arg.get(), env, filename);
         }
         return;
     }
 
     // If statement (blocks handle scoping)
     if (auto ifs = dynamic_cast<IfStmtAST*>(node)) {
-        typeCheckExpr(ifs->getCondition(), env);
+        typeCheckExpr(ifs->getCondition(), env, filename);
         // then
         env.enterScope();
-        typeCheckNode(ifs->getThenStmt(), env);
+        typeCheckNode(ifs->getThenStmt(), env, filename);
         env.exitScope();
         // else
         env.enterScope();
-        typeCheckNode(ifs->getElseStmt(), env);
+        typeCheckNode(ifs->getElseStmt(), env, filename);
         env.exitScope();
         return;
     }
 
     // While statement
     if (auto wh = dynamic_cast<WhileStmtAST*>(node)) {
-        typeCheckExpr(wh->getCondition(), env);
+        typeCheckExpr(wh->getCondition(), env, filename);
         env.enterScope();
-        typeCheckNode(wh->getBody(), env);
+        typeCheckNode(wh->getBody(), env, filename);
         env.exitScope();
         return;
     }
@@ -220,7 +226,7 @@ void typeCheckNode(ASTNode* node, TypeEnv& env) {
     if (auto block = dynamic_cast<BlockAST*>(node)) {
         env.enterScope();
         for (const auto& stmt : block->getStatements()) {
-            typeCheckNode(stmt.get(), env);
+            typeCheckNode(stmt.get(), env, filename);
         }
         env.exitScope();
         return;
@@ -230,7 +236,7 @@ void typeCheckNode(ASTNode* node, TypeEnv& env) {
     if (auto program = dynamic_cast<ProgramAST*>(node)) {
         env.enterScope();
         for (const auto& stmt : program->getStatements()) {
-            typeCheckNode(stmt.get(), env);
+            typeCheckNode(stmt.get(), env, filename);
         }
         env.exitScope();
         return;
@@ -238,7 +244,7 @@ void typeCheckNode(ASTNode* node, TypeEnv& env) {
 }
 } // namespace
 
-void typeCheck(ASTNode* node) {
+void typeCheck(ASTNode* node, const std::string& filename) {
     TypeEnv env;
-    typeCheckNode(node, env);
+    typeCheckNode(node, env, filename);
 }

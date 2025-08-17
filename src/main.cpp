@@ -132,55 +132,7 @@ void compileSource(const std::string& input, const std::string& filename) {
     }
 
     // 타입 체크 단계 추가
-    try {
-        typeCheck(programAST.get());
-    } catch (const ParseError&) {
-        // Preserve location-rich parse errors from typeCheck
-        throw;
-    } catch (const std::runtime_error& e) {
-        // Best-effort: scan input to find a '+' on a non-comment line (ignoring leading whitespace)
-        // AIDEV-TODO: typeCheck() 안으로 통합해야 함.
-        int errLine = 1;
-        int errCol = 1;
-        bool atLineStart = true;
-        bool lineIsComment = false;
-        int colCounter = 1; // 1-based column
-        bool found = false;
-        for (size_t i = 0; i < input.size(); ++i) {
-            char c = input[i];
-            if (atLineStart) {
-                // Determine if this line is a comment line after trimming spaces/tabs
-                lineIsComment = false;
-                size_t j = i;
-                while (j < input.size() && (input[j] == ' ' || input[j] == '\t')) j++;
-                if (j + 1 < input.size() && input[j] == '/' && input[j + 1] == '/') {
-                    lineIsComment = true;
-                }
-                atLineStart = false;
-                colCounter = 1;
-            }
-            if (c == '+') {
-                if (!lineIsComment) {
-                    errCol = colCounter;
-                    found = true;
-                    break;
-                }
-            }
-            if (c == '\n') {
-                if (!found) {
-                    errLine++;
-                    atLineStart = true;
-                }
-                continue;
-            }
-            if (c != '\r') {
-                colCounter++;
-            }
-        }
-        // If not found, default to 1:1
-        if (!found) { errLine = 1; errCol = 1; }
-        throw ParseError(e.what(), SourceLocation{filename, errLine, errCol});
-    }
+    typeCheck(programAST.get(), filename);
 
     // Generate IR for entire program
     llvm::Value* result = programAST->codegen();
@@ -223,7 +175,7 @@ int main(int argc, char* argv[]) {
         setupLLVMFunction(options.inputFile);
         
         // 소스 컴파일
-    compileSource(input, options.inputFile);
+        compileSource(input, options.inputFile);
         
         // IR 저장
         saveIRToFile(options.outputFile);

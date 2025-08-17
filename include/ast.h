@@ -56,24 +56,32 @@ public:
 class UnaryExprAST : public ExprAST {
     char op;
     std::unique_ptr<ExprAST> operand;
+    SourceLocation op_location; // location of operator for diagnostics
 public:
     UnaryExprAST(char op, std::unique_ptr<ExprAST> operand)
-        : op(op), operand(std::move(operand)) {}
+        : op(op), operand(std::move(operand)), op_location{} {}
+    UnaryExprAST(char op, std::unique_ptr<ExprAST> operand, SourceLocation loc)
+        : op(op), operand(std::move(operand)), op_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     char getOperator() const { return op; }
     ExprAST* getOperand() const { return operand.get(); }
+    const SourceLocation& getOperatorLocation() const { return op_location; }
 };
 
 class BinaryExprAST : public ExprAST {
     char op;
     std::unique_ptr<ExprAST> lhs, rhs;
+    SourceLocation op_location; // location of operator for diagnostics
 public:
     BinaryExprAST(char op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
-        : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+        : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), op_location{} {}
+    BinaryExprAST(char op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs, SourceLocation loc)
+        : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), op_location(std::move(loc)) {}
     llvm::Value* codegen() override;
     char getOperator() const { return op; }
     ExprAST* getLHS() const { return lhs.get(); }
     ExprAST* getRHS() const { return rhs.get(); }
+    const SourceLocation& getOperatorLocation() const { return op_location; }
 };
 
 class AssignmentExprAST : public ExprAST {

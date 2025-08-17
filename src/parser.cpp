@@ -62,10 +62,11 @@ std::unique_ptr<ExprAST> Parser::parseStringLiteral() {
 std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
     if (currentToken.type == TOK_MINUS) {
         char op = '-';
+        SourceLocation opLoc = currentToken.range.start;
         getNextToken(); // consume the unary operator
         auto operand = parsePrimary();
         if (!operand) return nullptr;
-        return std::make_unique<UnaryExprAST>(op, std::move(operand));
+        return std::make_unique<UnaryExprAST>(op, std::move(operand), opLoc);
     }
     
     return parsePrimary();
@@ -96,6 +97,7 @@ std::unique_ptr<ExprAST> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<Exp
             return lhs;
         
         int binOp = currentToken.type;
+        SourceLocation opLoc = currentToken.range.start;
         getNextToken();
         
         auto rhs = parseUnaryExpr();
@@ -107,7 +109,7 @@ std::unique_ptr<ExprAST> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<Exp
             if (!rhs) return nullptr;
         }
         
-        lhs = std::make_unique<BinaryExprAST>(binOp, std::move(lhs), std::move(rhs));
+        lhs = std::make_unique<BinaryExprAST>(binOp, std::move(lhs), std::move(rhs), opLoc);
     }
 }
 
