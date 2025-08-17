@@ -4,6 +4,8 @@
 
 AI 개발 시 체계적인 테스트 전략에 대한 상세한 가이드는 [HOWTO-TEST.md](HOWTO-TEST.md) 문서를 참조하세요.
 
+대규모 작업 절차는 [HOWTO-TASK.md](HOWTO-TASK.md) 문서를 참조하세요.
+
 ArithLang은 LLVM을 사용하여 산술 표현식을 실행 가능한 코드로 변환하는 간단한 컴파일러입니다.
 
 ## 기능
