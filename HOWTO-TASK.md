@@ -4,7 +4,11 @@
 
 ## 1) 배경: Context Engineering의 필요성과 '의도 이탈' 문제
 
-> Keeping agents on track through long, complex tasks. [Cline](https://www.linkedin.com/posts/clinebot_cline-v325-is-live-addressing-the-biggest-ugcPost-7362148463586783232-NT_x?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAEzDxcBAW1X5QEW8rSPInqKRgAXWRGOYfk)
+> AI Coding의 가장 큰 도전 과제:
+>
+> Keeping agents on track through long, complex tasks. 
+>
+> [Cline](https://www.linkedin.com/posts/clinebot_cline-v325-is-live-addressing-the-biggest-ugcPost-7362148463586783232-NT_x?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAEzDxcBAW1X5QEW8rSPInqKRgAXWRGOYfk)
 
 AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(context)을 어떻게 해석하는지에 따라 결과가 달라질 수 있습니다. 여러 도구와 단계가 얽힌 대규모 작업에서는, 맥락 전달이 불충분하거나 일관되지 않으면 초기 의도에서 벗어나는 '의도 이탈(drift)' 문제가 빈번하게 발생합니다. 
 
