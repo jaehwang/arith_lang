@@ -22,10 +22,11 @@ AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(contex
 ## 3) 전체 워크플로 개요
 
 * 준비
-  - SoT 지정: specs/variables.md을 작성한다. AI를 이용해 작성한 후 리뷰하는 방식을 권장한다. 요구 사항, 설계, 테스트 케이스 등을 포함한 명세 파일을 단일한 진실의 원천으로 삼는다.
-  - 계획 수립: `plans/mut-implementation-plan.md`. Sub Task들을 도출하고 구현 순서를 작성한다. 이 문서 역시 AI로 작성하고 사람이 리뷰하는 방식을 권장한다.
-  - 프로젝트 규칙 준수: AGENTS.md, rules/anchor-comments.md, rules/commit-log.md, memory-bank/ 등 AI가 준수해야 하는 규칙을 명확히 한다. 
-
+  1. 프로젝트 규칙 준수: AGENTS.md, rules/anchor-comments.md, rules/commit-log.md, memory-bank/ 등 AI가 준수해야 하는 규칙을 명확히 한다. 
+  2. SoT 지정: specs/variables.md을 작성한다. AI를 이용해 작성한 후 리뷰하는 방식을 권장한다. 요구 사항, 설계, 테스트 케이스 등을 포함한 명세 파일을 단일한 진실의 원천으로 삼는다.
+  3. 계획 수립
+     - `plans/mut-implementation-plan.md`. Sub Task들을 도출하고 구현 순서를 작성한다. 이 문서 역시 AI로 작성하고 사람이 리뷰하는 방식을 권장한다.
+     - 계획을 만들 때 사용할 수 있는 프롬프트로 Cline의 [Deep Planning](https://github.com/cline/cline/blob/main/docs/features/slash-commands/deep-planning.mdx)을 참고할 수 있다.
 * 실행 루프(각 단계 반복)
   1. Sub Task 구현/리팩토링
   2. 테스트 케이스 작성 (필요시)
