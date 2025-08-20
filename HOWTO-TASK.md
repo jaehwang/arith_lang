@@ -83,6 +83,8 @@ Cline의 [Deep Planning 명령](https://github.com/cline/cline/blob/main/docs/fe
 
 ### 1단계: Prompt 추가
 
+[Deep Planning 명령](https://github.com/cline/cline/blob/main/docs/features/slash-commands/deep-planning.mdx)의 내용을 Github Copilot 용 prompt로 변환한다.
+
 [`.github/prompts/deep-planning.prompt.md`](.github/prompts/deep-planning.prompt.md) 생성한다.
 
 ### 2단계: Deep Planning 요청
@@ -95,7 +97,7 @@ Agent 모드에서 다음과 같이 입력한다.
 
 [`plans/function-implementation-plan.md`](plans/function-implementation-plan.md)이 생성된다.
 
-### 4단계: 구현 순서에 따라 실행
+### 3단계: 구현 순서에 따라 실행
 
 [`plans/function-implementation-plan.md`](plans/sample-function-implementation-plan.md)에 정의된 구현 순서에 따라 각 Sub Task를 실행한다.
 
