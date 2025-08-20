@@ -73,8 +73,33 @@ AI 도구를 활용한 협업 개발에서는 각 도구가 작업 맥락(contex
     4. 섀도잉/재할당 규칙 적용 및 에러 메시지 형식 통일
     5. 테스트 케이스 작성 및 명세와 일치 여부 검증
 
+## 5) Github Copilot으로 Deep Planning 하기
 
-## 5) 참고
+Cline의 [Deep Planning 명령](https://github.com/cline/cline/blob/main/docs/features/slash-commands/deep-planning.mdx)을 Github Copilot의 사용자 Prompt로 활용할 수 있습니다.  
+
+[`specs/functions.md`](specs/functions.md) 명세를 바탕으로 Deep Planning을 요청하는 예시입니다.
+
+## 📝 단계별 과정
+
+### 1단계: Prompt 추가
+
+[`.github/prompts/deep-planning.prompt.md`](.github/prompts/deep-planning.prompt.md) 생성한다.
+
+### 2단계: Deep Planning 요청
+
+Agent 모드에서 다음과 같이 입력한다.
+
+```
+/deep-planning specs/functions.md 문서를 바탕으로 구현 계획을 만들어 줘.
+```
+
+[`plans/function-implementation-plan.md`](plans/function-implementation-plan.md)이 생성된다.
+
+### 4단계: 구현 순서에 따라 실행
+
+[`plans/function-implementation-plan.md`](plans/sample-function-implementation-plan.md)에 정의된 구현 순서에 따라 각 Sub Task를 실행한다.
+
+## 6) 참고
 
 * [Cline의 Deep Planning](https://docs.cline.bot/features/slash-commands/deep-planning)
 
