@@ -95,7 +95,7 @@ Agent 모드에서 다음과 같이 입력한다.
 /deep-planning specs/functions.md 문서를 바탕으로 구현 계획을 만들어 줘.
 ```
 
-[`plans/function-implementation-plan.md`](plans/function-implementation-plan.md)이 생성된다.
+[`plans/function-implementation-plan.md`](plans/sample-function-implementation-plan.md)이 생성된다.
 
 ### 3단계: 구현 순서에 따라 실행
 
