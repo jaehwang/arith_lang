@@ -1,5 +1,30 @@
 # AI Agent 사용하기
 
+## 파일 구조 요약
+
+```
+arith_lang/
+├── AGENTS.md                           # 메인 AI 에이전트 instruction 파일
+├── CLAUDE.md                          # Claude Code 전용 프로젝트 가이드라인
+├── .github/
+│   ├── copilot-instructions.md        # GitHub Copilot instruction 파일
+│   └── prompts/
+│       └── deep-planning.prompt.md    # Deep Planning 프롬프트 템플릿
+├── .clinerules/
+│   └── cline-instructions.md          # Cline 전용 작업 지침
+├── memory-bank/
+│   ├── projectbrief.md                # 프로젝트 기본 요구사항과 목표
+│   ├── productContext.md              # 프로젝트 존재 이유와 사용자 경험 목표
+│   ├── activeContext.md               # 현재 작업 포커스와 최근 변경사항
+│   ├── systemPatterns.md              # 시스템 아키텍처와 기술적 결정사항
+│   ├── techContext.md                 # 사용 기술과 개발 환경 설정
+│   └── progress.md                    # 현재 상태와 남은 작업
+└── rules/
+    ├── memory-bank.md                 # Memory Bank 시스템 지침
+    ├── anchor-comments.md             # 코드 주석 가이드라인
+    └── commit-log.md                  # 커밋 메시지 작성 규칙
+```
+
 ## AI Agent Instructions
 
 이 프로젝트는 다양한 AI 코딩 어시스턴트가 일관된 품질과 스타일로 작업할 수 있도록 종합적인 instruction 시스템을 제공합니다.
@@ -17,6 +42,12 @@
 - **Claude Code**: `CLAUDE.md`
   - Claude Code 전용 프로젝트 가이드라인
   - AGENTS.md 참조하여 모든 규칙 적용
+
+- **Deep Planning**: `.github/prompts/deep-planning.prompt.md`
+  - 복잡한 기능 구현 전 체계적 접근 방법론
+  - 3단계 프로세스: Silent Investigation → Discussion → Implementation Plan
+  - 코드베이스 탐사, 요구사항 명확화, 상세 계획 수립
+  - `implementation_plan.md` 생성으로 구현 청사진 제공
 
 ## 핵심 통합 규칙 시스템
 
@@ -61,6 +92,11 @@ memory-bank/
 
 4. **문서화 작업시**:
    - Memory Bank 시스템을 통한 프로젝트 상태 유지
+
+5. **복잡한 기능 구현시**:
+   - `.github/prompts/deep-planning.prompt.md` 활용한 Deep Planning 수행
+   - 체계적인 코드베이스 탐사와 요구사항 분석
+   - 상세한 구현 계획서 작성 후 단계별 실행
 
 ## 장점
 
