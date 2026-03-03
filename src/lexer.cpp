@@ -140,6 +140,10 @@ Token Lexer::handleKeywordOrIdentifier(const std::string& identifier, const Sour
         return Token(TOK_WHILE, identifier, 0.0, r);
     } else if (identifier == "mut") {
         return Token(TOK_MUT, identifier, 0.0, r);
+    } else if (identifier == "fn") {
+        return Token(TOK_FN, identifier, 0.0, r);
+    } else if (identifier == "return") {
+        return Token(TOK_RETURN, identifier, 0.0, r);
     }
     return Token(TOK_IDENTIFIER, identifier, 0.0, r);
 }
@@ -159,6 +163,10 @@ Token Lexer::handleOperator(char ch, const SourceLocation& startLoc) {
             if (currentChar == '=') {
                 advance();
                 return Token(TOK_EQ, "==", 0.0, SourceRange{curStart, currentLocation()});
+            }
+            if (currentChar == '>') {
+                advance();
+                return Token(TOK_ARROW, "=>", 0.0, SourceRange{curStart, currentLocation()});
             }
             return Token(TOK_ASSIGN, "=", 0.0, SourceRange{curStart, currentLocation()});
         case '>':

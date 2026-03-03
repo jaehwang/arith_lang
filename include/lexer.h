@@ -40,7 +40,10 @@ enum TokenType {
     TOK_LTE = -10,
     TOK_EQ = -11,
     TOK_NEQ = -12,
-    TOK_MUT = -13
+    TOK_MUT = -13,
+    TOK_FN = -14,
+    TOK_RETURN = -15,
+    TOK_ARROW = -16
 };
 
 struct Token {
