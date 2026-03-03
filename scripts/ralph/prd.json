@@ -1,0 +1,258 @@
+{
+  "project": "ArithLang",
+  "branchName": "ralph/defining-function",
+  "description": "Add first-class function definitions and lexical closures to ArithLang using fn(params) => expr and fn(params) { block } syntax, with immutable-by-default variable capture and explicit mutable capture via mut(var) clauses.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Tokenize function keywords and operators",
+      "description": "As a developer, I need the lexer to recognize `fn`, `return`, and `=>` so the parser can handle function syntax.",
+      "acceptanceCriteria": [
+        "`fn` tokenized as TOK_FN in the TokenType enum and lexer",
+        "`return` tokenized as TOK_RETURN in the TokenType enum and lexer",
+        "`=>` tokenized as TOK_ARROW in the TokenType enum and lexer",
+        "Existing tokens and keywords are unaffected",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Define AST nodes for functions",
+      "description": "As a developer, I need AST node classes for function literals, function calls, and return statements so the compiler pipeline can represent functions structurally.",
+      "acceptanceCriteria": [
+        "Supporting structs defined: FunctionParameter (name, is_mutable, location), CapturedVariable (name, is_mutable_capture, location), ClosureContext (immutable/mutable capture maps), FunctionValue (llvm_function, closure_context)",
+        "FunctionLiteralAST class defined in include/function_ast.h with: parameter list, capture list, body (ASTNode*), is_expression_function flag, source location",
+        "FunctionCallAST class defined with: callee ExprAST, argument list, source location",
+        "ReturnStmtAST class defined with: optional return value ExprAST, source location",
+        "All new AST classes inherit from ExprAST or ASTNode as appropriate and declare codegen() override",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Parse expression-style function literals",
+      "description": "As a user, I want to write `add = fn(x, y) => x + y;` so I can define simple single-expression functions.",
+      "acceptanceCriteria": [
+        "parseFunctionLiteral() added to parser; dispatched from parsePrimary() on TOK_FN",
+        "`fn(params) => expr` parsed into FunctionLiteralAST with is_expression_function = true",
+        "Parameters parsed as a comma-separated list of identifiers inside ()",
+        "Trailing comma in parameter list produces a parse error with source location",
+        "Unit tests in tests/test_function_parser.cpp cover basic expression function parsing",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Parse block-style function literals",
+      "description": "As a user, I want to write `fn(x) { result = x * 2; return result; }` so I can define multi-statement functions.",
+      "acceptanceCriteria": [
+        "`fn(params) { statements }` parsed into FunctionLiteralAST with is_expression_function = false",
+        "`return expr;` inside a block body parsed as ReturnStmtAST",
+        "parseReturnStatement() added to parser; dispatched from parseStatement() on TOK_RETURN",
+        "`return` at top level (outside any function body) is a parse error with source location",
+        "Unit tests in tests/test_function_parser.cpp cover block function and return statement parsing",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Parse mutable parameter declarations",
+      "description": "As a user, I want to write `fn(mut x, y) => x + y` so parameters can be declared mutable and reassigned inside the function body.",
+      "acceptanceCriteria": [
+        "`mut` before a parameter name sets FunctionParameter::is_mutable = true",
+        "Parameters without `mut` prefix have is_mutable = false",
+        "Unit tests cover: all-immutable params, all-mutable params, mixed params",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Parse capture clause for closures",
+      "description": "As a user, I want to write `fn() mut(counter) { counter = counter + 1; return counter; }` so I can explicitly capture outer mutable variables.",
+      "acceptanceCriteria": [
+        "parseCaptureClause() added to parser; recognized as `mut(var1, var2)` after the parameter list and before the body",
+        "Parsed capture names stored as CapturedVariable entries in FunctionLiteralAST",
+        "Absence of capture clause results in an empty capture list (not an error)",
+        "Unit tests cover: no capture clause, single capture, multiple captures",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Parse function call expressions",
+      "description": "As a user, I want to write `add(1, 2)` to call a function stored in a variable.",
+      "acceptanceCriteria": [
+        "parsePostfixExpr() extended to detect `(` after any primary expression and produce FunctionCallAST",
+        "parseFunctionCall() parses comma-separated argument list and closing `)`",
+        "Zero-argument calls `f()` are valid",
+        "Unit tests in tests/test_function_parser.cpp cover: 0-arg call, 1-arg call, multi-arg call, nested call `f(g(x))`",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Type-check functions and calls",
+      "description": "As a developer, I need the type checker to validate function definitions and call sites so users get clear errors before codegen.",
+      "acceptanceCriteria": [
+        "validateFunctionLiteral() checks: no duplicate parameter names",
+        "validateCapturedVariables() checks: each captured variable exists in outer scope and was declared mutable; capturing an undeclared or immutable variable is an error with source location",
+        "validateFunctionCall() checks: argument count matches parameter count; emits error with source location on mismatch",
+        "validateReturnStatement() checks: `return` is inside a function body",
+        "Reassigning an immutable parameter inside a function body is a type-check error",
+        "All errors use existing GCC-style ParseError with SourceLocation",
+        "Unit tests in tests/test_function_parser.cpp cover each error case",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Generate LLVM IR for expression functions",
+      "description": "As a user, I want `add = fn(x, y) => x + y; print add(3, 4);` to compile and print `7.000000000000000`.",
+      "acceptanceCriteria": [
+        "generateFunctionLiteral() in src/function_codegen.cpp emits a named llvm::Function for expression-body functions",
+        "Function parameters mapped to llvm::Argument values accessible within the body",
+        "generateFunctionCall() in src/codegen.cpp emits a llvm::CallInst",
+        "Integration test file tests/k/function_basic.k created: `add = fn(x, y) => x + y; result = add(20, 22); print result;` with `// EXPECTED: 42.000000000000000`",
+        "tests/k/function_basic.k passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Generate LLVM IR for block functions with return",
+      "description": "As a user, I want block-style functions with explicit `return` to compile and execute correctly.",
+      "acceptanceCriteria": [
+        "generateFunctionLiteral() handles is_expression_function = false by generating a block body",
+        "generateReturnStatement() emits llvm::ReturnInst at the return statement",
+        "Expression functions use the expression value as the implicit return value",
+        "Integration test tests/k/function_block.k created with a block-style function using explicit return, passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Unit tests pass (cd build && ctest)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Implement immutable closures",
+      "description": "As a user, I want `scale = fn(x) => x * multiplier;` to capture `multiplier` from the outer scope by value at definition time.",
+      "acceptanceCriteria": [
+        "Variables referenced inside a function body that are not parameters and not in the mut() capture clause are automatically captured by value (double copy) at function definition time",
+        "Captured immutable values are embedded in a closure context struct passed as an implicit extra argument to the LLVM function",
+        "Subsequent changes to the outer variable do not affect the closure's captured value",
+        "Integration test tests/k/function_closure.k created: `multiplier = 10; scale = fn(x) => x * multiplier; result = scale(5); print result;` with `// EXPECTED: 50.000000000000000`, passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Implement mutable closures",
+      "description": "As a user, I want `increment = fn() mut(counter) { counter = counter + 1; return counter; };` to modify and persist the outer `counter` across calls.",
+      "acceptanceCriteria": [
+        "Mutable captures use std::shared_ptr<double> so closure and outer scope share the same heap allocation",
+        "Closure context struct stores shared_ptr for mutable captures, double for immutable captures",
+        "Multiple calls to the closure reflect accumulated mutable state",
+        "Integration test tests/k/function_mutable_capture.k created with expected output: `// EXPECTED: 1.000000000000000` and `// EXPECTED: 2.000000000000000`, passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Support higher-order functions",
+      "description": "As a user, I want to pass functions as arguments and call them inside other functions, e.g. `apply(square, 5)` returns 25.",
+      "acceptanceCriteria": [
+        "Function values can be passed as arguments to other functions and stored in variables",
+        "generateFunctionCall() correctly handles a callee that is itself a function call result or a parameter holding a function value",
+        "Integration test tests/k/function_higher_order.k created: `apply = fn(f, x) => f(x); square = fn(x) => x * x; result = apply(square, 5); print result;` with `// EXPECTED: 25.000000000000000`, passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Support recursive functions",
+      "description": "As a user, I want to write a recursive function that calls itself by name, e.g. recursive factorial.",
+      "acceptanceCriteria": [
+        "A function stored in immutable variable `f` can call `f(...)` inside its own body (self-reference via the variable binding)",
+        "Integration test tests/k/function_recursive.k created implementing recursive factorial of 5, with `// EXPECTED: 120.000000000000000`, passes via ./test_runner.sh",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Update syntax specification and README",
+      "description": "As a developer reading the docs, I need the language syntax spec and README to reflect the new function grammar.",
+      "acceptanceCriteria": [
+        "specs/syntax.md BNF grammar updated to include <function_literal>, <call_expr>, <return_stmt>, <capture_clause>, and <parameter_list> rules",
+        "specs/syntax.md includes examples of: expression function, block function, closure with immutable capture, closure with mutable capture, higher-order function call",
+        "README.md features list updated to include: first-class function definitions (fn), lexical closures, mutable capture with mut(), higher-order functions, recursion",
+        "Build passes (cmake --build build)",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

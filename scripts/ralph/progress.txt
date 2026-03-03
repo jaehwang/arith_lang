@@ -1,0 +1,39 @@
+## Codebase Patterns
+- Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
+- FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
+- Token enum values for keywords use negative integers (e.g., TOK_FN = -14); single-char operators use ASCII values
+- Keyword recognition is in `handleKeywordOrIdentifier()` in src/lexer.cpp; operator recognition in `handleOperator()`
+- Multi-char operators (like `=>`, `==`, `>=`) handled in `handleOperator()` by checking next char after consuming first
+- AST nodes are in `include/ast.h`; codegen in `src/codegen.cpp`; parser in `src/parser.cpp`/`include/parser.h`
+- Integration test files go in `tests/k/` with `// EXPECTED:` comments; run via `./test_runner.sh` from project root
+- Unit tests use Google Test; individual test files in `tests/test_*.cpp`; run via `cd build && ctest`
+
+# Ralph Progress Log
+Started: Tue Mar  3 05:28:23 PM KST 2026
+---
+
+## 2026-03-03 - US-001
+- What was implemented: Added TOK_FN, TOK_RETURN, and TOK_ARROW to the lexer
+- Files changed:
+  - `include/lexer.h`: Added TOK_FN (-14), TOK_RETURN (-15), TOK_ARROW (-16) to TokenType enum
+  - `src/lexer.cpp`: Updated `handleKeywordOrIdentifier()` to recognize "fn" and "return"; updated `handleOperator()` to recognize "=>" (checks currentChar == '>' after consuming '=')
+- **Learnings for future iterations:**
+  - The `=>` arrow operator is handled in the `=` case of `handleOperator()` by checking if the next char is `>`
+  - `TOK_MUT = -13` was already present (for `mut` keyword), so new tokens start at -14
+  - Existing unit tests (10 suites) all pass after adding new tokens — backward compatible
+  - The `handleOperator()` function advances once before the switch statement, so `currentChar` is the char after `ch`
+---
+
+## 2026-03-03 - US-002
+- What was implemented: Added function-related AST nodes in a new header
+- Files changed:
+  - `include/function_ast.h`: New file — FunctionParameter, CapturedVariable, ClosureContext, FunctionValue structs; FunctionLiteralAST, FunctionCallAST, ReturnStmtAST classes with codegen() stubs
+  - `src/function_codegen.cpp`: New file — stub codegen() methods returning nullptr (implementations deferred to US-009/US-010)
+  - `CMakeLists.txt`: Added function_codegen.cpp to arith_core static library
+- **Learnings for future iterations:**
+  - FunctionLiteralAST and FunctionCallAST inherit ExprAST (they are expressions/values)
+  - ReturnStmtAST inherits ASTNode (it's a statement, not an expression)
+  - ClosureContext uses std::shared_ptr<double> for mutable captures to share heap allocation with outer scope
+  - FunctionValue contains llvm::Function* (forward-declared); needs llvm_libs to link
+  - Keep codegen() stubs returning nullptr until US-009/US-010 implement them
+---
