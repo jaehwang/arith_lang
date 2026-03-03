@@ -34,7 +34,8 @@ add_library(arith_core STATIC
     src/parser.cpp
     src/codegen.cpp
     src/type_check.cpp
-  src/parse_error_reporting.cpp
+    src/parse_error_reporting.cpp
+    src/function_codegen.cpp
 )
 target_include_directories(arith_core PUBLIC include)
 
