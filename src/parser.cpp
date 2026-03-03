@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "function_ast.h"
 #include <stdexcept>
 
 Parser::Parser(Lexer& lexer) : lexer(lexer), currentToken(TOK_EOF), previousToken(TOK_EOF) {
@@ -72,6 +73,56 @@ std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
     return parsePrimary();
 }
 
+std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
+    SourceLocation fnLoc = currentToken.range.start;
+    getNextToken(); // consume 'fn'
+
+    if (currentToken.type != TOK_LPAREN)
+        errorHere("Expected '(' after 'fn'");
+    getNextToken(); // consume '('
+
+    std::vector<FunctionParameter> params;
+    if (currentToken.type != TOK_RPAREN) {
+        if (currentToken.type != TOK_IDENTIFIER)
+            errorHere("Expected parameter name in function parameter list");
+
+        params.push_back({currentToken.value, false, currentToken.range.start});
+        getNextToken(); // consume first identifier
+
+        while (currentToken.type == TOK_COMMA) {
+            getNextToken(); // consume ','
+
+            if (currentToken.type == TOK_RPAREN)
+                errorHere("Trailing comma in parameter list");
+
+            if (currentToken.type != TOK_IDENTIFIER)
+                errorHere("Expected parameter name in function parameter list");
+
+            params.push_back({currentToken.value, false, currentToken.range.start});
+            getNextToken(); // consume identifier
+        }
+    }
+
+    if (currentToken.type != TOK_RPAREN)
+        errorHere("Expected ')' after function parameters");
+    getNextToken(); // consume ')'
+
+    if (currentToken.type != TOK_ARROW)
+        errorHere("Expected '=>' after function parameters");
+    getNextToken(); // consume '=>'
+
+    auto bodyExpr = parseExpression();
+    if (!bodyExpr) return nullptr;
+
+    return std::make_unique<FunctionLiteralAST>(
+        std::move(params),
+        std::vector<CapturedVariable>{},
+        std::move(bodyExpr),
+        true,
+        fnLoc
+    );
+}
+
 std::unique_ptr<ExprAST> Parser::parsePrimary() {
     switch (currentToken.type) {
         case TOK_IDENTIFIER:
@@ -84,6 +135,8 @@ std::unique_ptr<ExprAST> Parser::parsePrimary() {
             return parseParenExpr();
         case TOK_MINUS:
             return parseUnaryExpr();
+        case TOK_FN:
+            return parseFunctionLiteral();
         default:
             errorHere("Unknown token when expecting an expression");
     }

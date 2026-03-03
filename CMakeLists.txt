@@ -90,3 +90,8 @@ add_test(NAME IntegrationErrorReportingTests COMMAND test_integration_error_repo
 add_executable(test_mutability tests/test_mutability.cpp)
 target_link_libraries(test_mutability arith_core ${llvm_libs} gtest_main gmock)
 add_test(NAME MutabilityTests COMMAND test_mutability)
+
+# Function parser tests
+add_executable(test_function_parser tests/test_function_parser.cpp)
+target_link_libraries(test_function_parser arith_core ${llvm_libs} gtest_main)
+add_test(NAME FunctionParserTests COMMAND test_function_parser)

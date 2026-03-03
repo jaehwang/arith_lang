@@ -34,6 +34,7 @@ private:
     std::unique_ptr<ExprAST> parseNumberExpr();
     std::unique_ptr<ExprAST> parseIdentifierExpr();
     std::unique_ptr<ExprAST> parseStringLiteral();
+    std::unique_ptr<ExprAST> parseFunctionLiteral();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();
     [[noreturn]] void errorHere(const std::string& msg) {
