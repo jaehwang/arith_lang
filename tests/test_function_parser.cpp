@@ -216,3 +216,65 @@ TEST_F(FunctionParserTest, MissingBraceOrArrowAfterParamsIsError) {
     Parser parser(lexer);
     EXPECT_THROW(parser.parseProgram(), ParseError);
 }
+
+// ---- Mutable parameter declaration tests (US-005) ----
+
+TEST_F(FunctionParserTest, AllImmutableParams) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x, y) => x + y;", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getParams().size(), 2u);
+    EXPECT_FALSE(fnLit->getParams()[0].is_mutable);
+    EXPECT_FALSE(fnLit->getParams()[1].is_mutable);
+}
+
+TEST_F(FunctionParserTest, AllMutableParams) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(mut x, mut y) => x + y;", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getParams().size(), 2u);
+    EXPECT_EQ(fnLit->getParams()[0].name, "x");
+    EXPECT_TRUE(fnLit->getParams()[0].is_mutable);
+    EXPECT_EQ(fnLit->getParams()[1].name, "y");
+    EXPECT_TRUE(fnLit->getParams()[1].is_mutable);
+}
+
+TEST_F(FunctionParserTest, MixedMutableImmutableParams) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x, mut y) => x + y;", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getParams().size(), 2u);
+    EXPECT_EQ(fnLit->getParams()[0].name, "x");
+    EXPECT_FALSE(fnLit->getParams()[0].is_mutable);
+    EXPECT_EQ(fnLit->getParams()[1].name, "y");
+    EXPECT_TRUE(fnLit->getParams()[1].is_mutable);
+}
+
+TEST_F(FunctionParserTest, SingleMutableParam) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(mut n) => n;", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getParams().size(), 1u);
+    EXPECT_EQ(fnLit->getParams()[0].name, "n");
+    EXPECT_TRUE(fnLit->getParams()[0].is_mutable);
+}

@@ -81,13 +81,23 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
         errorHere("Expected '(' after 'fn'");
     getNextToken(); // consume '('
 
-    std::vector<FunctionParameter> params;
-    if (currentToken.type != TOK_RPAREN) {
+    // Parse a single parameter: [mut] identifier
+    auto parseOneParam = [&]() -> FunctionParameter {
+        bool is_mutable = false;
+        if (currentToken.type == TOK_MUT) {
+            is_mutable = true;
+            getNextToken(); // consume 'mut'
+        }
         if (currentToken.type != TOK_IDENTIFIER)
             errorHere("Expected parameter name in function parameter list");
+        FunctionParameter p{currentToken.value, is_mutable, currentToken.range.start};
+        getNextToken(); // consume identifier
+        return p;
+    };
 
-        params.push_back({currentToken.value, false, currentToken.range.start});
-        getNextToken(); // consume first identifier
+    std::vector<FunctionParameter> params;
+    if (currentToken.type != TOK_RPAREN) {
+        params.push_back(parseOneParam());
 
         while (currentToken.type == TOK_COMMA) {
             getNextToken(); // consume ','
@@ -95,11 +105,7 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
             if (currentToken.type == TOK_RPAREN)
                 errorHere("Trailing comma in parameter list");
 
-            if (currentToken.type != TOK_IDENTIFIER)
-                errorHere("Expected parameter name in function parameter list");
-
-            params.push_back({currentToken.value, false, currentToken.range.start});
-            getNextToken(); // consume identifier
+            params.push_back(parseOneParam());
         }
     }
 
