@@ -7,6 +7,7 @@
 - AST nodes are in `include/ast.h`; codegen in `src/codegen.cpp`; parser in `src/parser.cpp`/`include/parser.h`
 - Integration test files go in `tests/k/` with `// EXPECTED:` comments; run via `./test_runner.sh` from project root
 - Unit tests use Google Test; individual test files in `tests/test_*.cpp`; run via `cd build && ctest`
+- Parser tracks `functionDepth` (private int) to distinguish return inside function body from top-level return
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
@@ -50,4 +51,17 @@ Started: Tue Mar  3 05:28:23 PM KST 2026
   - ClosureContext uses std::shared_ptr<double> for mutable captures to share heap allocation with outer scope
   - FunctionValue contains llvm::Function* (forward-declared); needs llvm_libs to link
   - Keep codegen() stubs returning nullptr until US-009/US-010 implement them
+---
+
+## 2026-03-03 - US-004
+- What was implemented: Block-style function literals and return statement parsing
+- Files changed:
+  - `include/parser.h`: Added `functionDepth = 0` private member; added `parseReturnStatement()` declaration
+  - `src/parser.cpp`: Extended `parseFunctionLiteral()` to handle both `=>` (expression) and `{` (block) forms; added `parseReturnStatement()` that validates we're inside a function body; added `TOK_RETURN` case to `parseStatement()`
+  - `tests/test_function_parser.cpp`: Added 7 tests: BlockFunctionIsNotExpressionFunction, BlockFunctionBodyIsBlock, BlockFunctionWithReturnStatement, BlockFunctionMultipleStatements, BlockFunctionNoParams, ReturnAtTopLevelIsParseError, MissingBraceOrArrowAfterParamsIsError
+- **Learnings for future iterations:**
+  - `functionDepth` counter is incremented before `parseBlock()` in `parseFunctionLiteral()` and decremented after; this allows `return` inside nested if/while within a function body (depth > 0) while rejecting top-level `return`
+  - The block form passes `is_expression_function=false` to FunctionLiteralAST; body is a BlockAST (from parseBlock())
+  - Error message "Expected '=>' or '{' after function parameters" covers the case where neither arrow nor brace is found
+  - Bare `return;` (no expression) is supported and yields `ReturnStmtAST(nullptr, loc)` with `hasValue() == false`
 ---
