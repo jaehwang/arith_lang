@@ -119,3 +119,100 @@ TEST_F(FunctionParserTest, CaptureListIsEmpty) {
     ASSERT_NE(fnLit, nullptr);
     EXPECT_EQ(fnLit->getCaptures().size(), 0u);
 }
+
+// ---- Block-style function literal tests (US-004) ----
+
+TEST_F(FunctionParserTest, BlockFunctionIsNotExpressionFunction) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x) { y = x * 2; };", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    EXPECT_FALSE(fnLit->isExpressionFunction());
+    ASSERT_EQ(fnLit->getParams().size(), 1u);
+    EXPECT_EQ(fnLit->getParams()[0].name, "x");
+    EXPECT_NE(fnLit->getBody(), nullptr);
+}
+
+TEST_F(FunctionParserTest, BlockFunctionBodyIsBlock) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x) { y = x * 2; };", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+
+    auto* block = dynamic_cast<BlockAST*>(fnLit->getBody());
+    ASSERT_NE(block, nullptr);
+    EXPECT_EQ(block->getStatements().size(), 1u);
+}
+
+TEST_F(FunctionParserTest, BlockFunctionWithReturnStatement) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x) { return x * 2; };", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    EXPECT_FALSE(fnLit->isExpressionFunction());
+
+    auto* block = dynamic_cast<BlockAST*>(fnLit->getBody());
+    ASSERT_NE(block, nullptr);
+    ASSERT_EQ(block->getStatements().size(), 1u);
+
+    auto* ret = dynamic_cast<ReturnStmtAST*>(block->getStatements()[0].get());
+    ASSERT_NE(ret, nullptr);
+    EXPECT_TRUE(ret->hasValue());
+}
+
+TEST_F(FunctionParserTest, BlockFunctionMultipleStatements) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn(x, y) { a = x + y; return a; };", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+
+    auto* block = dynamic_cast<BlockAST*>(fnLit->getBody());
+    ASSERT_NE(block, nullptr);
+    EXPECT_EQ(block->getStatements().size(), 2u);
+
+    auto* ret = dynamic_cast<ReturnStmtAST*>(block->getStatements()[1].get());
+    ASSERT_NE(ret, nullptr);
+    EXPECT_TRUE(ret->hasValue());
+}
+
+TEST_F(FunctionParserTest, BlockFunctionNoParams) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn() { return 42; };", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    EXPECT_EQ(fnLit->getParams().size(), 0u);
+    EXPECT_FALSE(fnLit->isExpressionFunction());
+}
+
+TEST_F(FunctionParserTest, ReturnAtTopLevelIsParseError) {
+    Lexer lexer("return 42;");
+    Parser parser(lexer);
+    EXPECT_THROW(parser.parseProgram(), ParseError);
+}
+
+TEST_F(FunctionParserTest, MissingBraceOrArrowAfterParamsIsError) {
+    Lexer lexer("f = fn(x) x;");
+    Parser parser(lexer);
+    EXPECT_THROW(parser.parseProgram(), ParseError);
+}

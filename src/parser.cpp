@@ -107,20 +107,55 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
         errorHere("Expected ')' after function parameters");
     getNextToken(); // consume ')'
 
-    if (currentToken.type != TOK_ARROW)
-        errorHere("Expected '=>' after function parameters");
-    getNextToken(); // consume '=>'
+    if (currentToken.type == TOK_ARROW) {
+        getNextToken(); // consume '=>'
 
-    auto bodyExpr = parseExpression();
-    if (!bodyExpr) return nullptr;
+        auto bodyExpr = parseExpression();
+        if (!bodyExpr) return nullptr;
 
-    return std::make_unique<FunctionLiteralAST>(
-        std::move(params),
-        std::vector<CapturedVariable>{},
-        std::move(bodyExpr),
-        true,
-        fnLoc
-    );
+        return std::make_unique<FunctionLiteralAST>(
+            std::move(params),
+            std::vector<CapturedVariable>{},
+            std::move(bodyExpr),
+            true,
+            fnLoc
+        );
+    } else if (currentToken.type == TOK_LBRACE) {
+        functionDepth++;
+        auto body = parseBlock();
+        functionDepth--;
+        return std::make_unique<FunctionLiteralAST>(
+            std::move(params),
+            std::vector<CapturedVariable>{},
+            std::move(body),
+            false,
+            fnLoc
+        );
+    } else {
+        errorHere("Expected '=>' or '{' after function parameters");
+    }
+}
+
+std::unique_ptr<ASTNode> Parser::parseReturnStatement() {
+    SourceLocation retLoc = currentToken.range.start;
+    if (functionDepth == 0)
+        errorHere("'return' outside of function body");
+    getNextToken(); // consume 'return'
+
+    // bare return (no value)
+    if (currentToken.type == TOK_SEMICOLON) {
+        getNextToken(); // consume ';'
+        return std::make_unique<ReturnStmtAST>(nullptr, retLoc);
+    }
+
+    auto value = parseExpression();
+    if (!value) return nullptr;
+
+    if (currentToken.type != TOK_SEMICOLON)
+        errorAt("Expected ';' after return statement", previousToken.range.end);
+    getNextToken(); // consume ';'
+
+    return std::make_unique<ReturnStmtAST>(std::move(value), retLoc);
 }
 
 std::unique_ptr<ExprAST> Parser::parsePrimary() {
@@ -206,6 +241,8 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
             return parseIfStatement();
         case TOK_WHILE:
             return parseWhileStatement();
+        case TOK_RETURN:
+            return parseReturnStatement();
         case TOK_MUT: {
             // Handle mutable variable declaration: mut x = value;
             getNextToken(); // consume 'mut'

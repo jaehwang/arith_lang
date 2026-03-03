@@ -19,7 +19,8 @@ private:
     Token currentToken;
     Token previousToken;
     std::map<int, int> binOpPrecedence;
-    
+    int functionDepth = 0;  // tracks nesting depth inside function bodies
+
     void getNextToken() { previousToken = currentToken; currentToken = lexer.getNextToken(); }
     std::unique_ptr<ExprAST> parseExpression();
     std::unique_ptr<ExprAST> parseAssignment();
@@ -35,6 +36,7 @@ private:
     std::unique_ptr<ExprAST> parseIdentifierExpr();
     std::unique_ptr<ExprAST> parseStringLiteral();
     std::unique_ptr<ExprAST> parseFunctionLiteral();
+    std::unique_ptr<ASTNode> parseReturnStatement();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();
     [[noreturn]] void errorHere(const std::string& msg) {
