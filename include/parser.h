@@ -37,6 +37,8 @@ private:
     std::unique_ptr<ExprAST> parseIdentifierExpr();
     std::unique_ptr<ExprAST> parseStringLiteral();
     std::unique_ptr<ExprAST> parseFunctionLiteral();
+    std::unique_ptr<ExprAST> parsePostfixExpr();
+    std::unique_ptr<ExprAST> parseFunctionCall(std::unique_ptr<ExprAST> callee);
     std::vector<CapturedVariable> parseCaptureClause();
     std::unique_ptr<ASTNode> parseReturnStatement();
     int getTokenPrecedence();

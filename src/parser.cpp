@@ -60,17 +60,54 @@ std::unique_ptr<ExprAST> Parser::parseStringLiteral() {
     return std::make_unique<StringLiteralAST>(strValue, currentToken.range.start);
 }
 
+std::unique_ptr<ExprAST> Parser::parsePostfixExpr() {
+    auto expr = parsePrimary();
+    if (!expr) return nullptr;
+
+    while (currentToken.type == TOK_LPAREN) {
+        expr = parseFunctionCall(std::move(expr));
+        if (!expr) return nullptr;
+    }
+
+    return expr;
+}
+
+std::unique_ptr<ExprAST> Parser::parseFunctionCall(std::unique_ptr<ExprAST> callee) {
+    SourceLocation callLoc = currentToken.range.start; // location of '('
+    getNextToken(); // consume '('
+
+    std::vector<std::unique_ptr<ExprAST>> args;
+    if (currentToken.type != TOK_RPAREN) {
+        auto arg = parseExpression();
+        if (!arg) return nullptr;
+        args.push_back(std::move(arg));
+
+        while (currentToken.type == TOK_COMMA) {
+            getNextToken(); // consume ','
+            auto arg = parseExpression();
+            if (!arg) return nullptr;
+            args.push_back(std::move(arg));
+        }
+    }
+
+    if (currentToken.type != TOK_RPAREN)
+        errorHere("Expected ')' after function call arguments");
+    getNextToken(); // consume ')'
+
+    return std::make_unique<FunctionCallAST>(std::move(callee), std::move(args), callLoc);
+}
+
 std::unique_ptr<ExprAST> Parser::parseUnaryExpr() {
     if (currentToken.type == TOK_MINUS) {
         char op = '-';
         SourceLocation opLoc = currentToken.range.start;
         getNextToken(); // consume the unary operator
-        auto operand = parsePrimary();
+        auto operand = parsePostfixExpr();
         if (!operand) return nullptr;
         return std::make_unique<UnaryExprAST>(op, std::move(operand), opLoc);
     }
-    
-    return parsePrimary();
+
+    return parsePostfixExpr();
 }
 
 std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {

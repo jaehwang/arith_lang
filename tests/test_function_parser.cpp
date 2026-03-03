@@ -321,3 +321,81 @@ TEST_F(FunctionParserTest, MultipleCaptureClause) {
     EXPECT_TRUE(fnLit->getCaptures()[1].is_mutable_capture);
     EXPECT_TRUE(fnLit->getCaptures()[2].is_mutable_capture);
 }
+
+// ---- Function call expression tests (US-007) ----
+
+TEST_F(FunctionParserTest, FunctionCallZeroArgs) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("result = f();", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+
+    auto* call = dynamic_cast<FunctionCallAST*>(assign->getValue());
+    ASSERT_NE(call, nullptr);
+    EXPECT_EQ(call->getArgs().size(), 0u);
+
+    auto* callee = dynamic_cast<VariableExprAST*>(call->getCallee());
+    ASSERT_NE(callee, nullptr);
+    EXPECT_EQ(callee->getName(), "f");
+}
+
+TEST_F(FunctionParserTest, FunctionCallOneArg) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("result = f(42);", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+
+    auto* call = dynamic_cast<FunctionCallAST*>(assign->getValue());
+    ASSERT_NE(call, nullptr);
+    ASSERT_EQ(call->getArgs().size(), 1u);
+
+    auto* callee = dynamic_cast<VariableExprAST*>(call->getCallee());
+    ASSERT_NE(callee, nullptr);
+    EXPECT_EQ(callee->getName(), "f");
+}
+
+TEST_F(FunctionParserTest, FunctionCallMultipleArgs) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("result = f(1, 2, 3);", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+
+    auto* call = dynamic_cast<FunctionCallAST*>(assign->getValue());
+    ASSERT_NE(call, nullptr);
+    ASSERT_EQ(call->getArgs().size(), 3u);
+
+    auto* callee = dynamic_cast<VariableExprAST*>(call->getCallee());
+    ASSERT_NE(callee, nullptr);
+    EXPECT_EQ(callee->getName(), "f");
+}
+
+TEST_F(FunctionParserTest, FunctionCallNested) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("result = f(g(x));", owner);
+    ASSERT_NE(stmt, nullptr);
+
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+
+    auto* outerCall = dynamic_cast<FunctionCallAST*>(assign->getValue());
+    ASSERT_NE(outerCall, nullptr);
+    ASSERT_EQ(outerCall->getArgs().size(), 1u);
+
+    auto* outerCallee = dynamic_cast<VariableExprAST*>(outerCall->getCallee());
+    ASSERT_NE(outerCallee, nullptr);
+    EXPECT_EQ(outerCallee->getName(), "f");
+
+    auto* innerCall = dynamic_cast<FunctionCallAST*>(outerCall->getArgs()[0].get());
+    ASSERT_NE(innerCall, nullptr);
+    ASSERT_EQ(innerCall->getArgs().size(), 1u);
+
+    auto* innerCallee = dynamic_cast<VariableExprAST*>(innerCall->getCallee());
+    ASSERT_NE(innerCallee, nullptr);
+    EXPECT_EQ(innerCallee->getName(), "g");
+}
