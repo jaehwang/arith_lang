@@ -8,6 +8,7 @@
 - Integration test files go in `tests/k/` with `// EXPECTED:` comments; run via `./test_runner.sh` from project root
 - Unit tests use Google Test; individual test files in `tests/test_*.cpp`; run via `cd build && ctest`
 - Parser tracks `functionDepth` (private int) to distinguish return inside function body from top-level return
+- Function calls use postfix parsing: parsePostfixExpr() wraps parsePrimary() in a loop checking for TOK_LPAREN; parseUnaryExpr() calls parsePostfixExpr() instead of parsePrimary()
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
@@ -75,4 +76,30 @@ Started: Tue Mar  3 05:28:23 PM KST 2026
   - The block form passes `is_expression_function=false` to FunctionLiteralAST; body is a BlockAST (from parseBlock())
   - Error message "Expected '=>' or '{' after function parameters" covers the case where neither arrow nor brace is found
   - Bare `return;` (no expression) is supported and yields `ReturnStmtAST(nullptr, loc)` with `hasValue() == false`
+---
+
+## 2026-03-03 - US-006
+- What was implemented: Added parseCaptureClause() to parser for `mut(var1, var2)` capture clause after parameter list
+- Files changed:
+  - `include/parser.h`: Added `#include "function_ast.h"` (required for CapturedVariable return type); added `parseCaptureClause()` declaration
+  - `src/parser.cpp`: Added `parseCaptureClause()` implementation; hooked into `parseFunctionLiteral()` after consuming `)` — checks for TOK_MUT then calls parseCaptureClause(), replacing hardcoded empty `std::vector<CapturedVariable>{}`
+  - `tests/test_function_parser.cpp`: Added 3 tests: NoCaptureClauseGivesEmptyCaptures, SingleCaptureClause, MultipleCaptureClause
+- **Learnings for future iterations:**
+  - `mut(...)` capture clause must be parsed BEFORE checking for `=>` or `{`, positioned between param list `)` and body
+  - Adding `#include "function_ast.h"` to parser.h is necessary when a private method returns `std::vector<CapturedVariable>`
+  - In parseFunctionLiteral(), `TOK_MUT` after the param-list `)` unambiguously signals a capture clause (not a mutable variable declaration), so no lookahead is needed
+  - All `CapturedVariable` entries from the mut() clause have `is_mutable_capture = true`
+---
+
+## 2026-03-03 - US-007
+- What was implemented: Added parsePostfixExpr() and parseFunctionCall() for function call expressions
+- Files changed:
+  - `include/parser.h`: Added `parsePostfixExpr()` and `parseFunctionCall(std::unique_ptr<ExprAST>)` declarations
+  - `src/parser.cpp`: Implemented `parsePostfixExpr()` (calls parsePrimary(), then loops on TOK_LPAREN to produce FunctionCallAST); implemented `parseFunctionCall()` (parses comma-separated args and closing `)`); updated `parseUnaryExpr()` to call `parsePostfixExpr()` instead of `parsePrimary()`
+  - `tests/test_function_parser.cpp`: Added 4 tests: FunctionCallZeroArgs, FunctionCallOneArg, FunctionCallMultipleArgs, FunctionCallNested
+- **Learnings for future iterations:**
+  - parsePostfixExpr() sits between parseUnaryExpr() and parsePrimary() in the call chain; this enables chained calls like f(x)(y)
+  - parseFunctionCall() takes ownership of the callee unique_ptr and returns a FunctionCallAST; the call location is the position of the '(' token
+  - The change to parseUnaryExpr() is minimal: swap parsePrimary() -> parsePostfixExpr() in both the unary-minus branch and the fallthrough
+  - No changes needed to parseBinOpRHS since it calls parseUnaryExpr() which now correctly handles postfix via parsePostfixExpr()
 ---
