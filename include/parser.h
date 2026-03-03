@@ -1,6 +1,7 @@
 #pragma once
 #include "lexer.h"
 #include "ast.h"
+#include "function_ast.h"
 #include <memory>
 #include <map>
 #include <stdexcept>
@@ -36,6 +37,7 @@ private:
     std::unique_ptr<ExprAST> parseIdentifierExpr();
     std::unique_ptr<ExprAST> parseStringLiteral();
     std::unique_ptr<ExprAST> parseFunctionLiteral();
+    std::vector<CapturedVariable> parseCaptureClause();
     std::unique_ptr<ASTNode> parseReturnStatement();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();

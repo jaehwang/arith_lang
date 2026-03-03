@@ -113,6 +113,11 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
         errorHere("Expected ')' after function parameters");
     getNextToken(); // consume ')'
 
+    // Parse optional capture clause: mut(var1, var2, ...)
+    std::vector<CapturedVariable> captures;
+    if (currentToken.type == TOK_MUT)
+        captures = parseCaptureClause();
+
     if (currentToken.type == TOK_ARROW) {
         getNextToken(); // consume '=>'
 
@@ -121,7 +126,7 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
 
         return std::make_unique<FunctionLiteralAST>(
             std::move(params),
-            std::vector<CapturedVariable>{},
+            std::move(captures),
             std::move(bodyExpr),
             true,
             fnLoc
@@ -132,7 +137,7 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
         functionDepth--;
         return std::make_unique<FunctionLiteralAST>(
             std::move(params),
-            std::vector<CapturedVariable>{},
+            std::move(captures),
             std::move(body),
             false,
             fnLoc
@@ -140,6 +145,39 @@ std::unique_ptr<ExprAST> Parser::parseFunctionLiteral() {
     } else {
         errorHere("Expected '=>' or '{' after function parameters");
     }
+}
+
+std::vector<CapturedVariable> Parser::parseCaptureClause() {
+    // currentToken is 'mut'; next must be '(' to form a capture clause
+    getNextToken(); // consume 'mut'
+
+    if (currentToken.type != TOK_LPAREN)
+        errorHere("Expected '(' after 'mut' in capture clause");
+    getNextToken(); // consume '('
+
+    std::vector<CapturedVariable> captures;
+    if (currentToken.type != TOK_RPAREN) {
+        if (currentToken.type != TOK_IDENTIFIER)
+            errorHere("Expected variable name in capture clause");
+        captures.push_back({currentToken.value, true, currentToken.range.start});
+        getNextToken(); // consume identifier
+
+        while (currentToken.type == TOK_COMMA) {
+            getNextToken(); // consume ','
+            if (currentToken.type == TOK_RPAREN)
+                errorHere("Trailing comma in capture clause");
+            if (currentToken.type != TOK_IDENTIFIER)
+                errorHere("Expected variable name in capture clause");
+            captures.push_back({currentToken.value, true, currentToken.range.start});
+            getNextToken(); // consume identifier
+        }
+    }
+
+    if (currentToken.type != TOK_RPAREN)
+        errorHere("Expected ')' after capture clause");
+    getNextToken(); // consume ')'
+
+    return captures;
 }
 
 std::unique_ptr<ASTNode> Parser::parseReturnStatement() {

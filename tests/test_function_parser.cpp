@@ -278,3 +278,46 @@ TEST_F(FunctionParserTest, SingleMutableParam) {
     EXPECT_EQ(fnLit->getParams()[0].name, "n");
     EXPECT_TRUE(fnLit->getParams()[0].is_mutable);
 }
+
+// ---- Capture clause tests (US-006) ----
+
+TEST_F(FunctionParserTest, NoCaptureClauseGivesEmptyCaptures) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn() { return 1; };", owner);
+    ASSERT_NE(stmt, nullptr);
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    EXPECT_EQ(fnLit->getCaptures().size(), 0u);
+}
+
+TEST_F(FunctionParserTest, SingleCaptureClause) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn() mut(counter) { return counter; };", owner);
+    ASSERT_NE(stmt, nullptr);
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getCaptures().size(), 1u);
+    EXPECT_EQ(fnLit->getCaptures()[0].name, "counter");
+    EXPECT_TRUE(fnLit->getCaptures()[0].is_mutable_capture);
+}
+
+TEST_F(FunctionParserTest, MultipleCaptureClause) {
+    std::unique_ptr<ASTNode> owner;
+    auto* stmt = parseOneStatement("f = fn() mut(a, b, c) { return a; };", owner);
+    ASSERT_NE(stmt, nullptr);
+    auto* assign = dynamic_cast<AssignmentExprAST*>(stmt);
+    ASSERT_NE(assign, nullptr);
+    auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue());
+    ASSERT_NE(fnLit, nullptr);
+    ASSERT_EQ(fnLit->getCaptures().size(), 3u);
+    EXPECT_EQ(fnLit->getCaptures()[0].name, "a");
+    EXPECT_EQ(fnLit->getCaptures()[1].name, "b");
+    EXPECT_EQ(fnLit->getCaptures()[2].name, "c");
+    EXPECT_TRUE(fnLit->getCaptures()[0].is_mutable_capture);
+    EXPECT_TRUE(fnLit->getCaptures()[1].is_mutable_capture);
+    EXPECT_TRUE(fnLit->getCaptures()[2].is_mutable_capture);
+}
