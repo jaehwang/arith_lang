@@ -1,3 +1,31 @@
+## 2026-03-04 - US-015
+- What was implemented: Updated specs/syntax.md and README.md to document first-class functions
+- Files changed:
+  - `specs/syntax.md`: Added "First-Class Functions" section with examples for expression functions, block functions, mutable parameters, immutable closures, mutable closures, higher-order functions, and recursive functions
+  - `README.md`: Updated 기능 (Features) list to include: 일급 함수 정의(fn), 렉시컬 클로저, mut() 가변 캡처, 고차 함수, 재귀
+- **Learnings for future iterations:**
+  - BNF grammar in specs/syntax.md was already complete from prior stories; only examples were missing
+  - README.md is in Korean — new feature descriptions should follow the same language and style
+---
+
+## 2026-03-04 - US-014
+- What was implemented: Recursive function support via closure self-bundle reconstruction
+- Files changed:
+  - `include/function_ast.h`: Added `functionBodyReferencesVar()` declaration
+  - `include/codegen.h`: Added `pendingSelfRefVar` field and `setPendingSelfRefVar`/`clearPendingSelfRefVar`/`getPendingSelfRefVar` accessors
+  - `src/function_codegen.cpp`: Implemented `functionBodyReferencesVar()`; in `FunctionLiteralAST::codegen()`: filter self-ref var from freeVars; always extract envArg; reconstruct self-bundle inside inner function body when `pendingSelfRefVar` is set
+  - `src/codegen.cpp`: Include `function_ast.h`; detect self-referential function literals in `AssignmentExprAST::codegen()` and set/clear `pendingSelfRefVar` around the codegen call
+  - `src/type_check.cpp`: Detect self-referential function literal in `typeCheckNode` for `AssignmentExprAST`; pre-declare the variable as Function before type-checking the body so the body can see itself
+  - `tests/k/function_recursive.k`: Integration test `factorial = fn(n) { mut result = 0; if(n==0){result=1;}else{result=n*factorial(n-1);}; return result; }; result = factorial(5); print result;` → 120.0
+- **Learnings for future iterations:**
+  - Self-bundle reconstruction: inside the inner LLVM function, `{ptrtoint(func), ptrtoint(envArg)}` recreates the closure bundle for the function itself — any recursive call using the declared variable decodes this bundle and calls the same inner function
+  - The `if` statement does NOT need a trailing `;` (unlike expression statements) — `parseBlock()` dispatches `TOK_IF` directly via `parseStatement()`
+  - The `if` statement uses `(cond)` syntax (with parens), `{ then }` block, mandatory `else { }` block — no `then` keyword
+  - For recursive functions, the type checker must pre-declare the variable BEFORE type-checking the function body (so `factorial` in the body resolves correctly)
+  - The `pendingSelfRefVar` side-channel in CodeGen is set/cleared by `AssignmentExprAST::codegen()` and read by `FunctionLiteralAST::codegen()` to know which variable to create a self-bundle for
+  - `envArg` must always be extracted (not gated on `N_free > 0 || N_mut > 0`) because the self-bundle needs it even for functions with no other captures
+---
+
 ## 2026-03-04 - US-008
 - What was implemented: Extended type_check.cpp to validate function literals and calls
 - Files changed:
@@ -68,6 +96,17 @@
   - `capturedValues` (immutable) and `mutCapturedPtrs` (mutable) are computed in outer context BEFORE `SetInsertPoint(entryBB)` — these LLVM Values are then used after restoring the insert point to populate the env array
 ---
 
+## 2026-03-04 - US-013
+- What was implemented: Higher-order functions — passing function values as arguments and calling them inside other functions
+- Files changed:
+  - `tests/k/function_higher_order.k`: Integration test `apply = fn(f, x) => f(x); square = fn(x) => x * x; result = apply(square, 5); print result;` → `25.000000000000000`
+- **Learnings for future iterations:**
+  - No codegen changes needed: the closure bundle encoding (double = ptr to {fn_ptr_i64, env_ptr_i64}) already works for function values passed as arguments, since all doubles (whether numbers or closure bundle pointers) flow through the same double-typed allocas
+  - `FunctionCallAST::codegen()` dynamically decodes the bundle at runtime regardless of whether the callee is a direct variable, a parameter holding a closure, or a call result — so higher-order function dispatch is transparent
+  - Type checker silently accepts `f(x)` when `f` is a parameter (typed as ValueType::Number): the arity check fires only when `calleeInfo.type == ValueType::Function`, so calls through function-typed parameters are unchecked but not rejected
+  - The key insight: function values stored as closure bundles (encoded as doubles) are indistinguishable from number doubles at the LLVM level — any double can be decoded as a closure bundle, enabling transparent higher-order dispatch
+---
+
 ## Codebase Patterns
 - Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
 - FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
@@ -89,6 +128,9 @@
 - Indirect LLVM calls require explicit FunctionType* in CreateCall(funcType, fnPtr, args) with opaque pointers (LLVM 15+)
 - Mutable captures: heap malloc(8) per var; env[N_free+j] stores ptr-as-i64 (GEP(i64,env,idx)); inside fn: load ptr, read/write through it; sync stack in CodeGen (MutCaptureSync) handles copy-back before ret
 - Always push/pop sync stack in FunctionLiteralAST::codegen() (even empty list) to prevent nested fn from syncing wrong function's captures
+- Recursive functions: self-bundle {ptrtoint(func), ptrtoint(envArg)} reconstructed inside inner LLVM function body; pendingSelfRefVar side-channel in CodeGen passes the assignment variable name
+- `if` statement syntax: `if (cond) { then } else { }` — no trailing `;`, parens required around condition, mandatory else clause
+- Type checker pre-declares self-ref var before type-checking body; codegen detects self-ref via functionBodyReferencesVar() and sets pendingSelfRefVar
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
