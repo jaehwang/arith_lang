@@ -4,6 +4,9 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Constants.h"
+#include <set>
+#include <string>
+#include <vector>
 
 // Forward declaration (defined in codegen.cpp)
 CodeGen& getCodeGen();
@@ -11,46 +14,191 @@ CodeGen& getCodeGen();
 // Counter for generating unique function names
 static int fnCounter = 0;
 
-// AIDEV-NOTE: Function pointers are encoded as double values via ptrtoint+bitcast.
-// This allows storing functions in the existing double-typed variable allocas.
-// Encoding: ptr -> i64 (ptrtoint) -> double (bitcast)
-// Decoding: double -> i64 (bitcast) -> ptr (inttoptr)
+// Declare (or get) malloc function in the module
+static llvm::Function* getMalloc(CodeGen& cg) {
+    if (auto* fn = cg.getModule().getFunction("malloc")) return fn;
+    auto* mallocTy = llvm::FunctionType::get(
+        llvm::PointerType::getUnqual(cg.getContext()),
+        {llvm::Type::getInt64Ty(cg.getContext())},
+        /*isVarArg=*/false);
+    return llvm::Function::Create(
+        mallocTy, llvm::Function::ExternalLinkage, "malloc", cg.getModule());
+}
+
+// Recursively collect variable reads and local declaration names from an AST node.
+// Does NOT recurse into nested FunctionLiteralAST (separate scope).
+static void collectVarRefsAndDecls(ASTNode* node,
+                                    std::vector<std::string>& refs,
+                                    std::vector<std::string>& decls) {
+    if (!node) return;
+    if (auto* v = dynamic_cast<VariableExprAST*>(node)) {
+        refs.push_back(v->getName());
+        return;
+    }
+    if (dynamic_cast<NumberExprAST*>(node) || dynamic_cast<StringLiteralAST*>(node)) {
+        return;
+    }
+    if (auto* assign = dynamic_cast<AssignmentExprAST*>(node)) {
+        decls.push_back(assign->getVarName());
+        collectVarRefsAndDecls(assign->getValue(), refs, decls);
+        return;
+    }
+    if (auto* bin = dynamic_cast<BinaryExprAST*>(node)) {
+        collectVarRefsAndDecls(bin->getLHS(), refs, decls);
+        collectVarRefsAndDecls(bin->getRHS(), refs, decls);
+        return;
+    }
+    if (auto* un = dynamic_cast<UnaryExprAST*>(node)) {
+        collectVarRefsAndDecls(un->getOperand(), refs, decls);
+        return;
+    }
+    if (auto* call = dynamic_cast<FunctionCallAST*>(node)) {
+        collectVarRefsAndDecls(call->getCallee(), refs, decls);
+        for (const auto& arg : call->getArgs())
+            collectVarRefsAndDecls(arg.get(), refs, decls);
+        return;
+    }
+    if (dynamic_cast<FunctionLiteralAST*>(node)) {
+        return;  // nested fn literal — do not recurse into it
+    }
+    if (auto* block = dynamic_cast<BlockAST*>(node)) {
+        for (const auto& stmt : block->getStatements())
+            collectVarRefsAndDecls(stmt.get(), refs, decls);
+        return;
+    }
+    if (auto* print = dynamic_cast<PrintStmtAST*>(node)) {
+        collectVarRefsAndDecls(print->getFormatExpr(), refs, decls);
+        for (const auto& arg : print->getArgs())
+            collectVarRefsAndDecls(arg.get(), refs, decls);
+        return;
+    }
+    if (auto* ret = dynamic_cast<ReturnStmtAST*>(node)) {
+        if (ret->hasValue())
+            collectVarRefsAndDecls(ret->getValue(), refs, decls);
+        return;
+    }
+    if (auto* ifs = dynamic_cast<IfStmtAST*>(node)) {
+        collectVarRefsAndDecls(ifs->getCondition(), refs, decls);
+        collectVarRefsAndDecls(ifs->getThenStmt(), refs, decls);
+        collectVarRefsAndDecls(ifs->getElseStmt(), refs, decls);
+        return;
+    }
+    if (auto* wh = dynamic_cast<WhileStmtAST*>(node)) {
+        collectVarRefsAndDecls(wh->getCondition(), refs, decls);
+        collectVarRefsAndDecls(wh->getBody(), refs, decls);
+        return;
+    }
+}
+
+// Compute the ordered list of immutable free variables for a function body.
+// Free vars: referenced in body, NOT in params, NOT in explicit mut() captures,
+// NOT locally declared in body, AND exist in the current outer CodeGen scope.
+static std::vector<std::string> computeFreeVars(
+    ASTNode* body,
+    const std::vector<FunctionParameter>& params,
+    const std::vector<CapturedVariable>& captures,
+    CodeGen& cg)
+{
+    std::vector<std::string> refs, decls;
+    collectVarRefsAndDecls(body, refs, decls);
+
+    std::set<std::string> excluded;
+    for (const auto& p : params) excluded.insert(p.name);
+    for (const auto& c : captures) excluded.insert(c.name);
+    for (const auto& d : decls) excluded.insert(d);
+
+    std::vector<std::string> result;
+    std::set<std::string> seen;
+    for (const auto& r : refs) {
+        if (!excluded.count(r) && seen.insert(r).second && cg.getVariable(r)) {
+            result.push_back(r);
+        }
+    }
+    return result;
+}
+
+// AIDEV-NOTE: Closure bundle encoding:
+// Each function value is a double encoding a ptr to a 2-element i64 bundle:
+//   bundle[0] = LLVM function pointer (as i64)
+//   bundle[1] = env pointer (as i64, 0 = no captures)
+// The env is a heap-allocated double[] with one slot per immutable free variable.
+// All generated LLVM functions take an extra 'ptr env' as their LAST parameter.
+// At call site, the bundle is decoded to recover fn_ptr and env_ptr.
 llvm::Value* FunctionLiteralAST::codegen() {
     auto& cg = getCodeGen();
 
-    // Save current insert point so we can restore after generating the function body
+    // Compute immutable free variables while still in the outer scope
+    auto freeVars = computeFreeVars(body.get(), params, captures, cg);
+
+    // Snapshot current values of free variables from the outer scope
+    std::vector<llvm::Value*> capturedValues;
+    capturedValues.reserve(freeVars.size());
+    for (const auto& varName : freeVars) {
+        auto* alloca = cg.getVariable(varName);
+        auto* val = cg.getBuilder().CreateLoad(
+            llvm::Type::getDoubleTy(cg.getContext()), alloca, varName + "_snap");
+        capturedValues.push_back(val);
+    }
+
+    // Save current insert point to restore after inner function body generation
     auto* savedBlock = cg.getBuilder().GetInsertBlock();
 
-    // Build LLVM function type: N double params, returns double
+    // Build LLVM function type: double(double p1, ..., ptr env)
     std::vector<llvm::Type*> paramTypes(params.size(), llvm::Type::getDoubleTy(cg.getContext()));
+    paramTypes.push_back(llvm::PointerType::getUnqual(cg.getContext()));  // env ptr
     auto* funcType = llvm::FunctionType::get(
         llvm::Type::getDoubleTy(cg.getContext()), paramTypes, /*isVarArg=*/false);
 
-    // Create the LLVM function with a unique internal name
     std::string fnName = "__fn_" + std::to_string(fnCounter++);
     auto* func = llvm::Function::Create(
         funcType, llvm::Function::InternalLinkage, fnName, cg.getModule());
 
-    // Name each LLVM argument to match the parameter names
+    // Name arguments
     {
         int i = 0;
         for (auto& arg : func->args()) {
-            arg.setName(params[i++].name);
+            if (i < (int)params.size()) arg.setName(params[i++].name);
+            else arg.setName("env");
         }
     }
 
-    // Create function body and set insert point into the new function
+    // Generate inner function body
     auto* entryBB = llvm::BasicBlock::Create(cg.getContext(), "entry", func);
     cg.getBuilder().SetInsertPoint(entryBB);
 
-    // Enter a new scope and declare each parameter as a local alloca
     cg.enterScope();
+
+    // Declare user parameter allocas
     {
         int i = 0;
         for (auto& arg : func->args()) {
-            auto* alloca = cg.declareVariable(params[i].name, params[i].is_mutable, params[i].location);
-            cg.getBuilder().CreateStore(&arg, alloca);
-            ++i;
+            if (i < (int)params.size()) {
+                auto* alloca = cg.declareVariable(params[i].name, params[i].is_mutable, params[i].location);
+                cg.getBuilder().CreateStore(&arg, alloca);
+                ++i;
+            }
+        }
+    }
+
+    // Load captured values from env and shadow outer scope vars with local allocas
+    if (!freeVars.empty()) {
+        llvm::Value* envArg = nullptr;
+        {
+            int i = 0;
+            for (auto& arg : func->args()) {
+                if (i == (int)params.size()) { envArg = &arg; break; }
+                ++i;
+            }
+        }
+        for (int i = 0; i < (int)freeVars.size(); ++i) {
+            auto* elemPtr = cg.getBuilder().CreateConstGEP1_64(
+                llvm::Type::getDoubleTy(cg.getContext()), envArg, i,
+                freeVars[i] + "_env_ptr");
+            auto* capVal = cg.getBuilder().CreateLoad(
+                llvm::Type::getDoubleTy(cg.getContext()), elemPtr, freeVars[i] + "_cap");
+            // Declare a local alloca with the same name, shadowing the outer scope
+            auto* capAlloca = cg.declareVariable(freeVars[i], /*is_mutable=*/false, SourceLocation{});
+            cg.getBuilder().CreateStore(capVal, capAlloca);
         }
     }
 
@@ -58,13 +206,10 @@ llvm::Value* FunctionLiteralAST::codegen() {
     llvm::Value* bodyVal = nullptr;
     if (is_expression_function) {
         auto* bodyExpr = dynamic_cast<ExprAST*>(body.get());
-        if (bodyExpr) {
-            bodyVal = bodyExpr->codegen();
-        }
+        if (bodyExpr) bodyVal = bodyExpr->codegen();
     } else {
-        // Block-style: generate all statements; ReturnStmtAST emits ret directly
+        // Block-style: statements generate code; ReturnStmtAST emits ret directly
         body->codegen();
-        // If control falls through without a return, add implicit ret 0.0
         if (!cg.getBuilder().GetInsertBlock()->getTerminator()) {
             cg.getBuilder().CreateRet(
                 llvm::ConstantFP::get(cg.getContext(), llvm::APFloat(0.0)));
@@ -80,36 +225,90 @@ llvm::Value* FunctionLiteralAST::codegen() {
     // Restore the caller's insert point
     cg.getBuilder().SetInsertPoint(savedBlock);
 
-    // Encode function pointer as double: ptr -> i64 -> double
-    auto* fnAsI64 = cg.getBuilder().CreatePtrToInt(
-        func, llvm::Type::getInt64Ty(cg.getContext()), "fnptr_i64");
+    // --- Build closure bundle in the outer context ---
+    auto* mallocFn = getMalloc(cg);
+
+    // Allocate env array on the heap and store captured values
+    llvm::Value* envPtrI64;
+    if (!capturedValues.empty()) {
+        auto* envSize = llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(cg.getContext()),
+            static_cast<uint64_t>(capturedValues.size() * 8));
+        auto* envMem = cg.getBuilder().CreateCall(mallocFn, {envSize}, "env_mem");
+        for (int i = 0; i < (int)capturedValues.size(); ++i) {
+            auto* elemPtr = cg.getBuilder().CreateConstGEP1_64(
+                llvm::Type::getDoubleTy(cg.getContext()), envMem, i, "env_slot");
+            cg.getBuilder().CreateStore(capturedValues[i], elemPtr);
+        }
+        envPtrI64 = cg.getBuilder().CreatePtrToInt(
+            envMem, llvm::Type::getInt64Ty(cg.getContext()), "env_ptr_i64");
+    } else {
+        envPtrI64 = llvm::ConstantInt::get(llvm::Type::getInt64Ty(cg.getContext()), 0);
+    }
+
+    // Malloc closure bundle: 2 x i64 = 16 bytes { fn_ptr_i64, env_ptr_i64 }
+    auto* bundleMem = cg.getBuilder().CreateCall(
+        mallocFn,
+        {llvm::ConstantInt::get(llvm::Type::getInt64Ty(cg.getContext()), 16)},
+        "closure_bundle");
+
+    // Store fn_ptr as i64 at bundle[0]
+    auto* fnPtrI64 = cg.getBuilder().CreatePtrToInt(
+        func, llvm::Type::getInt64Ty(cg.getContext()), "fn_ptr_i64");
+    cg.getBuilder().CreateStore(fnPtrI64, bundleMem);
+
+    // Store env_ptr as i64 at bundle[1]
+    auto* slot1 = cg.getBuilder().CreateConstGEP1_64(
+        llvm::Type::getInt64Ty(cg.getContext()), bundleMem, 1, "bundle_slot1");
+    cg.getBuilder().CreateStore(envPtrI64, slot1);
+
+    // Encode bundle pointer as double: ptr -> i64 -> double
+    auto* bundlePtrI64 = cg.getBuilder().CreatePtrToInt(
+        bundleMem, llvm::Type::getInt64Ty(cg.getContext()), "bundle_i64");
     return cg.getBuilder().CreateBitCast(
-        fnAsI64, llvm::Type::getDoubleTy(cg.getContext()), "fnptr_double");
+        bundlePtrI64, llvm::Type::getDoubleTy(cg.getContext()), "bundle_double");
 }
 
 llvm::Value* FunctionCallAST::codegen() {
     auto& cg = getCodeGen();
 
-    // Codegen the callee expression (function pointer encoded as double)
+    // Codegen the callee expression (closure bundle pointer encoded as double)
     llvm::Value* calleeVal = callee->codegen();
     if (!calleeVal) return nullptr;
 
-    // Decode function pointer: double -> i64 -> ptr
-    auto* fnAsI64 = cg.getBuilder().CreateBitCast(
-        calleeVal, llvm::Type::getInt64Ty(cg.getContext()), "fnptr_i64");
-    auto* fnPtr = cg.getBuilder().CreateIntToPtr(
-        fnAsI64, llvm::PointerType::getUnqual(cg.getContext()), "fnptr");
+    // Decode bundle pointer: double -> i64 -> ptr
+    auto* bundlePtrI64 = cg.getBuilder().CreateBitCast(
+        calleeVal, llvm::Type::getInt64Ty(cg.getContext()), "bundle_i64");
+    auto* bundle = cg.getBuilder().CreateIntToPtr(
+        bundlePtrI64, llvm::PointerType::getUnqual(cg.getContext()), "bundle_ptr");
 
-    // Codegen all arguments
+    // Load fn_ptr_i64 from bundle[0], then convert to function pointer
+    auto* fnPtrI64 = cg.getBuilder().CreateLoad(
+        llvm::Type::getInt64Ty(cg.getContext()), bundle, "fn_ptr_i64");
+    auto* fnPtr = cg.getBuilder().CreateIntToPtr(
+        fnPtrI64, llvm::PointerType::getUnqual(cg.getContext()), "fn_ptr");
+
+    // Load env_ptr_i64 from bundle[1], convert to ptr
+    auto* slot1 = cg.getBuilder().CreateConstGEP1_64(
+        llvm::Type::getInt64Ty(cg.getContext()), bundle, 1, "bundle_slot1");
+    auto* envPtrI64 = cg.getBuilder().CreateLoad(
+        llvm::Type::getInt64Ty(cg.getContext()), slot1, "env_ptr_i64");
+    auto* envPtr = cg.getBuilder().CreateIntToPtr(
+        envPtrI64, llvm::PointerType::getUnqual(cg.getContext()), "env_ptr");
+
+    // Codegen user arguments
     std::vector<llvm::Value*> argValues;
+    argValues.reserve(args.size() + 1);
     for (const auto& arg : args) {
         auto* v = arg->codegen();
         if (!v) return nullptr;
         argValues.push_back(v);
     }
+    argValues.push_back(envPtr);  // env pointer is the last argument
 
-    // Reconstruct the function type for the indirect call (all doubles)
+    // Build function type: double(double*N, ptr)
     std::vector<llvm::Type*> paramTypes(args.size(), llvm::Type::getDoubleTy(cg.getContext()));
+    paramTypes.push_back(llvm::PointerType::getUnqual(cg.getContext()));
     auto* funcType = llvm::FunctionType::get(
         llvm::Type::getDoubleTy(cg.getContext()), paramTypes, /*isVarArg=*/false);
 
