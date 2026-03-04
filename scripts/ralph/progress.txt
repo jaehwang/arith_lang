@@ -11,6 +11,20 @@
   - Tests for type-check errors parse a full program first, then call `typeCheck(program.get())` and `EXPECT_THROW(..., ParseError)`
 ---
 
+## 2026-03-04 - US-009
+- What was implemented: LLVM IR codegen for expression-style function literals and function calls
+- Files changed:
+  - `src/function_codegen.cpp`: Implemented `FunctionLiteralAST::codegen()` (emits `llvm::Function` with alloca-based params, generates expression body, returns function pointer encoded as double) and `FunctionCallAST::codegen()` (decodes function pointer from double, emits indirect `llvm::CallInst`)
+  - `tests/k/function_basic.k`: Integration test `add = fn(x, y) => x + y; result = add(20, 22); print result;` → `42.000000000000000`
+- **Learnings for future iterations:**
+  - Function pointers are encoded as `double` via `ptrtoint` (ptr→i64) + `bitcast` (i64→double) to fit the existing double-typed variable allocas; decoding reverses this: `bitcast` (double→i64) + `inttoptr` (i64→ptr)
+  - `FunctionLiteralAST::codegen()` must save/restore `builder->GetInsertBlock()` before/after generating the inner function body; failing to restore causes subsequent IR to be emitted in the wrong function
+  - `cg.enterScope()` + `declareVariable` + `CreateStore` pattern correctly allocates and initialises param allocas in the inner function's entry block; `cg.exitScope()` after body generation is safe because `bodyVal` is already an `llvm::Value*`
+  - `cg.declareVariable` inside the inner function correctly places allocas at the beginning of that function's entry block (it uses `builder->GetInsertBlock()->getParent()` to locate the function)
+  - Indirect calls with opaque pointers (LLVM 15+) require an explicit `FunctionType*` in `CreateCall(funcType, fnPtr, args)`
+  - `getCodeGen()` needs a forward declaration in `function_codegen.cpp` since it is defined in `codegen.cpp`
+---
+
 ## Codebase Patterns
 - Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
 - FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
@@ -24,6 +38,9 @@
 - Function calls use postfix parsing: parsePostfixExpr() wraps parsePrimary() in a loop checking for TOK_LPAREN; parseUnaryExpr() calls parsePostfixExpr() instead of parsePrimary()
 - Type checker uses TypeInfo {ValueType type, int param_count} to propagate function arity from inferExprType; SymbolInfo has is_parameter flag to block immutable param reassignment
 - Type checker handles FunctionLiteralAST in inferExprType: validates dup params, capture validity, then enters function scope, declares params, type-checks body, exits scope
+- Function pointers stored as double in allocas via ptrtoint (ptr→i64) + bitcast (i64→double); decoded by bitcast (double→i64) + inttoptr (i64→ptr) before indirect calls
+- FunctionLiteralAST::codegen() saves/restores builder insert block around inner function body generation; uses cg.enterScope()/exitScope() for param scope
+- Indirect LLVM calls require explicit FunctionType* in CreateCall(funcType, fnPtr, args) with opaque pointers (LLVM 15+)
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
