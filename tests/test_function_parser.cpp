@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "function_ast.h"
+#include "type_check.h"
 
 class FunctionParserTest : public ::testing::Test {};
 
@@ -398,4 +399,79 @@ TEST_F(FunctionParserTest, FunctionCallNested) {
     auto* innerCallee = dynamic_cast<VariableExprAST*>(innerCall->getCallee());
     ASSERT_NE(innerCallee, nullptr);
     EXPECT_EQ(innerCallee->getName(), "g");
+}
+
+// ---- Type-checking tests (US-008) ----
+
+// Helper: parse a multi-statement program
+static std::unique_ptr<ASTNode> parseProgram(const std::string& input) {
+    Lexer lexer(input);
+    Parser parser(lexer);
+    return parser.parseProgram();
+}
+
+TEST_F(FunctionParserTest, TypeCheck_DuplicateParamNameIsError) {
+    auto program = parseProgram("f = fn(x, x) => x;");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_DuplicateParamNameThreeParamsIsError) {
+    auto program = parseProgram("f = fn(a, b, a) => a + b;");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_CapturingUndeclaredVariableIsError) {
+    auto program = parseProgram("f = fn() mut(nonexistent) { return 1; };");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_CapturingImmutableVariableIsError) {
+    // z is declared immutable; capturing it via mut() clause is an error
+    auto program = parseProgram("z = 5; f = fn() mut(z) { return z; };");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_CapturingMutableVariableIsOk) {
+    // mut z is mutable; capturing it is allowed
+    auto program = parseProgram("mut z = 5; f = fn() mut(z) { return z; };");
+    EXPECT_NO_THROW(typeCheck(program.get()));
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ArgCountMismatchTooFewIsError) {
+    // f expects 2 args, called with 1
+    auto program = parseProgram("f = fn(x, y) => x + y; result = f(1);");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ArgCountMismatchTooManyIsError) {
+    // f expects 1 arg, called with 2
+    auto program = parseProgram("f = fn(x) => x; result = f(1, 2);");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ArgCountMatchIsOk) {
+    auto program = parseProgram("f = fn(x, y) => x + y; result = f(1, 2);");
+    EXPECT_NO_THROW(typeCheck(program.get()));
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ZeroArgCallIsOk) {
+    auto program = parseProgram("f = fn() => 42; result = f();");
+    EXPECT_NO_THROW(typeCheck(program.get()));
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ReassignImmutableParamIsError) {
+    // x is an immutable parameter; reassigning it inside the body is an error
+    auto program = parseProgram("f = fn(x) { x = 5; return x; };");
+    EXPECT_THROW(typeCheck(program.get()), ParseError);
+}
+
+TEST_F(FunctionParserTest, TypeCheck_ReassignMutableParamIsOk) {
+    // mut x is a mutable parameter; reassigning it is allowed
+    auto program = parseProgram("f = fn(mut x) { x = 5; return x; };");
+    EXPECT_NO_THROW(typeCheck(program.get()));
+}
+
+TEST_F(FunctionParserTest, TypeCheck_NoDuplicateParamsIsOk) {
+    auto program = parseProgram("f = fn(x, y, z) => x + y + z;");
+    EXPECT_NO_THROW(typeCheck(program.get()));
 }
