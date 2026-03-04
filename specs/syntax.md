@@ -7,11 +7,14 @@
                  | "print" <print_args> ";"
                  | "if" "(" <expression> ")" <block> "else" <block>
                  | "while" "(" <expression> ")" <block>
+                 | <return_stmt>
 
 <print_args>    ::= <string_literal> ("," <expression>)*
                  | <expression>
 
 <block>         ::= "{" <statement>* "}"
+
+<return_stmt>  ::= "return" <expression>? ";"
 
 <assignment>   ::= <mut_qualifier>? <identifier> "=" <expression>
 <mut_qualifier>::= "mut"
@@ -22,15 +25,29 @@
 
 <term>         ::= <factor> ( ("*" | "/") <factor> )*
 
-<factor>       ::= <unary>
-                 | <primary>
+<factor>       ::= "-" <call_expr>
+                 | <call_expr>
 
-<unary>        ::= "-" <primary>
+<call_expr>    ::= <primary> ( "(" <arg_list>? ")" )*
+
+<arg_list>     ::= <expression> ("," <expression>)*
 
 <primary>      ::= <number>
                  | <identifier>
                  | <string_literal>
                  | "(" <expression> ")"
+                 | <function_literal>
+
+<function_literal> ::= "fn" "(" <parameter_list>? ")" <capture_clause>? <function_body>
+
+<function_body>    ::= "=>" <expression>
+                     | <block>
+
+<parameter_list>   ::= <parameter> ("," <parameter>)*
+
+<parameter>        ::= "mut"? <identifier>
+
+<capture_clause>   ::= "mut" "(" <identifier> ("," <identifier>)* ")"
 
 <string_literal> ::= '"' <string_content> '"'
 
@@ -46,6 +63,82 @@
 ```
 
 ## Language Features
+
+### First-Class Functions
+
+ArithLang supports first-class function values using the `fn` keyword.
+
+#### Expression Functions
+Single-expression functions with `=>` body:
+```
+add = fn(x, y) => x + y;
+result = add(3, 4);
+print result;         // 7.000000000000000
+```
+
+#### Block Functions
+Multi-statement functions with explicit `return`:
+```
+triple = fn(x) {
+    result = x * 3;
+    return result;
+};
+y = triple(14);
+print y;              // 42.000000000000000
+```
+
+#### Mutable Parameters
+Parameters declared with `mut` can be reassigned inside the function body:
+```
+clamp = fn(mut x, lo, hi) => {
+    if (x < lo) { x = lo; } else { x = x; }
+    return x;
+};
+```
+
+#### Closures — Immutable Capture
+Variables from outer scope are automatically captured by value at definition time:
+```
+multiplier = 10;
+scale = fn(x) => x * multiplier;
+result = scale(5);
+print result;         // 50.000000000000000
+// Later changes to `multiplier` do not affect `scale`
+```
+
+#### Closures — Mutable Capture
+Use `mut(var)` clause to share a heap-allocated binding with the outer scope:
+```
+mut counter = 0;
+increment = fn() mut(counter) {
+    counter = counter + 1;
+    return counter;
+};
+x = increment();
+print x;              // 1.000000000000000
+y = increment();
+print y;              // 2.000000000000000
+```
+
+#### Higher-Order Functions
+Functions can be passed as arguments and called inside other functions:
+```
+apply = fn(f, x) => f(x);
+square = fn(x) => x * x;
+result = apply(square, 5);
+print result;         // 25.000000000000000
+```
+
+#### Recursive Functions
+A function can call itself by referring to the variable it is assigned to:
+```
+factorial = fn(n) {
+    mut result = 0;
+    if (n == 0) { result = 1; } else { result = n * factorial(n - 1); }
+    return result;
+};
+print factorial(5);   // 120.000000000000000
+```
 
 ### Arithmetic Expressions
 - Binary operators: `+`, `-`, `*`, `/`
