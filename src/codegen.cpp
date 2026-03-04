@@ -139,6 +139,23 @@ llvm::Function* CodeGen::getPrintfDeclaration() {
     return printfFunc;
 }
 
+void CodeGen::pushMutCaptureSyncs(std::vector<MutCaptureSync> syncs) {
+    mutCaptureSyncStack.push_back(std::move(syncs));
+}
+
+void CodeGen::popMutCaptureSyncs() {
+    if (!mutCaptureSyncStack.empty()) mutCaptureSyncStack.pop_back();
+}
+
+void CodeGen::emitMutCaptureSyncs() {
+    if (mutCaptureSyncStack.empty()) return;
+    for (const auto& s : mutCaptureSyncStack.back()) {
+        auto* cur = builder->CreateLoad(
+            llvm::Type::getDoubleTy(*context), s.localAlloca, "sync_val");
+        builder->CreateStore(cur, s.sharedPtr);
+    }
+}
+
 void CodeGen::printModule() {
     module->print(llvm::outs(), nullptr);
 }

@@ -121,23 +121,49 @@ static std::vector<std::string> computeFreeVars(
 // Each function value is a double encoding a ptr to a 2-element i64 bundle:
 //   bundle[0] = LLVM function pointer (as i64)
 //   bundle[1] = env pointer (as i64, 0 = no captures)
-// The env is a heap-allocated double[] with one slot per immutable free variable.
+// The env is a heap-allocated array with N_free doubles followed by N_mut i64 ptr values.
+//   env[0..N_free-1]       = immutable free var values (double)
+//   env[N_free..N_free+N_mut-1] = mutable capture heap ptrs (i64/ptr, 8 bytes each)
 // All generated LLVM functions take an extra 'ptr env' as their LAST parameter.
 // At call site, the bundle is decoded to recover fn_ptr and env_ptr.
+//
+// Mutable captures: each mutable var gets a separate malloc(8) heap double shared
+// between the outer scope (initialized once at closure creation) and the closure
+// (reads/writes go through the heap ptr). State persists across closure calls.
+// The sync stack in CodeGen tracks {local_alloca, shared_heap_ptr} pairs so that
+// ReturnStmtAST::codegen() and block fallthrough can sync local state to heap before ret.
 llvm::Value* FunctionLiteralAST::codegen() {
     auto& cg = getCodeGen();
 
     // Compute immutable free variables while still in the outer scope
     auto freeVars = computeFreeVars(body.get(), params, captures, cg);
+    int N_free = static_cast<int>(freeVars.size());
+    int N_mut  = static_cast<int>(captures.size());
 
-    // Snapshot current values of free variables from the outer scope
+    // Snapshot current values of immutable free variables from the outer scope
     std::vector<llvm::Value*> capturedValues;
-    capturedValues.reserve(freeVars.size());
+    capturedValues.reserve(N_free);
     for (const auto& varName : freeVars) {
         auto* alloca = cg.getVariable(varName);
         auto* val = cg.getBuilder().CreateLoad(
             llvm::Type::getDoubleTy(cg.getContext()), alloca, varName + "_snap");
         capturedValues.push_back(val);
+    }
+
+    // Allocate heap doubles for mutable captures in the outer scope.
+    // Each heap double is initialized with the current outer value and serves as
+    // shared storage between the outer scope and all future closure calls.
+    std::vector<llvm::Value*> mutCapturedPtrs;
+    mutCapturedPtrs.reserve(N_mut);
+    auto* mallocFn = getMalloc(cg);
+    for (const auto& cap : captures) {
+        auto* outerAlloca = cg.getVariable(cap.name);
+        auto* outerVal = cg.getBuilder().CreateLoad(
+            llvm::Type::getDoubleTy(cg.getContext()), outerAlloca, cap.name + "_outer");
+        auto* heapSize = llvm::ConstantInt::get(llvm::Type::getInt64Ty(cg.getContext()), 8);
+        auto* heapMem = cg.getBuilder().CreateCall(mallocFn, {heapSize}, cap.name + "_mut_heap");
+        cg.getBuilder().CreateStore(outerVal, heapMem);
+        mutCapturedPtrs.push_back(heapMem);
     }
 
     // Save current insert point to restore after inner function body generation
@@ -180,17 +206,19 @@ llvm::Value* FunctionLiteralAST::codegen() {
         }
     }
 
-    // Load captured values from env and shadow outer scope vars with local allocas
-    if (!freeVars.empty()) {
-        llvm::Value* envArg = nullptr;
-        {
-            int i = 0;
-            for (auto& arg : func->args()) {
-                if (i == (int)params.size()) { envArg = &arg; break; }
-                ++i;
-            }
+    // Get envArg (last function argument) if there are any captures
+    llvm::Value* envArg = nullptr;
+    if (N_free > 0 || N_mut > 0) {
+        int i = 0;
+        for (auto& arg : func->args()) {
+            if (i == (int)params.size()) { envArg = &arg; break; }
+            ++i;
         }
-        for (int i = 0; i < (int)freeVars.size(); ++i) {
+    }
+
+    // Load immutable captures from env and shadow outer scope vars with local allocas
+    if (N_free > 0 && envArg) {
+        for (int i = 0; i < N_free; ++i) {
             auto* elemPtr = cg.getBuilder().CreateConstGEP1_64(
                 llvm::Type::getDoubleTy(cg.getContext()), envArg, i,
                 freeVars[i] + "_env_ptr");
@@ -202,6 +230,32 @@ llvm::Value* FunctionLiteralAST::codegen() {
         }
     }
 
+    // Load mutable capture heap ptrs from env, set up local mutable allocas,
+    // and build the sync list for copy-back on return.
+    std::vector<CodeGen::MutCaptureSync> syncList;
+    if (N_mut > 0 && envArg) {
+        syncList.reserve(N_mut);
+        for (int j = 0; j < N_mut; ++j) {
+            const auto& cap = captures[j];
+            // env[N_free + j] stores the heap ptr as i64 (same 8-byte slot size as double)
+            auto* i64Slot = cg.getBuilder().CreateConstGEP1_64(
+                llvm::Type::getInt64Ty(cg.getContext()), envArg, N_free + j,
+                cap.name + "_heap_slot");
+            auto* heapPtrI64 = cg.getBuilder().CreateLoad(
+                llvm::Type::getInt64Ty(cg.getContext()), i64Slot, cap.name + "_heap_i64");
+            auto* heapPtr = cg.getBuilder().CreateIntToPtr(
+                heapPtrI64, llvm::PointerType::getUnqual(cg.getContext()), cap.name + "_heap_ptr");
+            // Load current value from heap into a local mutable alloca
+            auto* curVal = cg.getBuilder().CreateLoad(
+                llvm::Type::getDoubleTy(cg.getContext()), heapPtr, cap.name + "_cur");
+            auto* localAlloca = cg.declareVariable(cap.name, /*is_mutable=*/true, cap.location);
+            cg.getBuilder().CreateStore(curVal, localAlloca);
+            syncList.push_back({localAlloca, heapPtr});
+        }
+    }
+    // Always push (even empty) so ReturnStmtAST syncs the correct function's captures
+    cg.pushMutCaptureSyncs(std::move(syncList));
+
     // Codegen the body
     llvm::Value* bodyVal = nullptr;
     if (is_expression_function) {
@@ -211,6 +265,8 @@ llvm::Value* FunctionLiteralAST::codegen() {
         // Block-style: statements generate code; ReturnStmtAST emits ret directly
         body->codegen();
         if (!cg.getBuilder().GetInsertBlock()->getTerminator()) {
+            // Fallthrough: sync mutable captures then emit implicit ret 0.0
+            cg.emitMutCaptureSyncs();
             cg.getBuilder().CreateRet(
                 llvm::ConstantFP::get(cg.getContext(), llvm::APFloat(0.0)));
         }
@@ -219,27 +275,43 @@ llvm::Value* FunctionLiteralAST::codegen() {
     cg.exitScope();
 
     if (bodyVal) {
+        // Expression function: sync mutable captures before emitting ret
+        cg.emitMutCaptureSyncs();
         cg.getBuilder().CreateRet(bodyVal);
     }
+
+    cg.popMutCaptureSyncs();
 
     // Restore the caller's insert point
     cg.getBuilder().SetInsertPoint(savedBlock);
 
     // --- Build closure bundle in the outer context ---
-    auto* mallocFn = getMalloc(cg);
 
-    // Allocate env array on the heap and store captured values
+    // Allocate env array on the heap: N_free doubles + N_mut i64 ptr values (8 bytes each)
+    int N_total = N_free + N_mut;
     llvm::Value* envPtrI64;
-    if (!capturedValues.empty()) {
+    if (N_total > 0) {
         auto* envSize = llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(cg.getContext()),
-            static_cast<uint64_t>(capturedValues.size() * 8));
+            static_cast<uint64_t>(N_total * 8));
         auto* envMem = cg.getBuilder().CreateCall(mallocFn, {envSize}, "env_mem");
-        for (int i = 0; i < (int)capturedValues.size(); ++i) {
+
+        // Store immutable captured doubles at env[0..N_free-1]
+        for (int i = 0; i < N_free; ++i) {
             auto* elemPtr = cg.getBuilder().CreateConstGEP1_64(
                 llvm::Type::getDoubleTy(cg.getContext()), envMem, i, "env_slot");
             cg.getBuilder().CreateStore(capturedValues[i], elemPtr);
         }
+
+        // Store mutable capture heap ptrs (as i64) at env[N_free..N_free+N_mut-1]
+        for (int j = 0; j < N_mut; ++j) {
+            auto* ptrAsI64 = cg.getBuilder().CreatePtrToInt(
+                mutCapturedPtrs[j], llvm::Type::getInt64Ty(cg.getContext()), "mut_ptr_i64");
+            auto* slot = cg.getBuilder().CreateConstGEP1_64(
+                llvm::Type::getInt64Ty(cg.getContext()), envMem, N_free + j, "mut_env_slot");
+            cg.getBuilder().CreateStore(ptrAsI64, slot);
+        }
+
         envPtrI64 = cg.getBuilder().CreatePtrToInt(
             envMem, llvm::Type::getInt64Ty(cg.getContext()), "env_ptr_i64");
     } else {
@@ -324,6 +396,8 @@ llvm::Value* ReturnStmtAST::codegen() {
     } else {
         retVal = llvm::ConstantFP::get(cg.getContext(), llvm::APFloat(0.0));
     }
+    // Sync mutable captures back to heap before returning
+    cg.emitMutCaptureSyncs();
     cg.getBuilder().CreateRet(retVal);
     return retVal;
 }

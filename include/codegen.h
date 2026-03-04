@@ -37,7 +37,19 @@ private:
         // Stack of scopes (innermost at back)
         std::vector<std::map<std::string, Symbol>> scopes;
     std::string sourceFileName;
-    
+
+    // AIDEV-NOTE: Mutable capture sync stack — one entry per function being generated.
+    // Each entry is a list of {local_alloca, shared_heap_ptr} pairs. When a return
+    // is emitted, emitMutCaptureSyncs() stores local values back to heap storage so
+    // the shared state persists across closure calls.
+public:
+    struct MutCaptureSync {
+        llvm::AllocaInst* localAlloca;  // mutable local double alloca inside closure
+        llvm::Value*      sharedPtr;    // pointer to shared heap double
+    };
+private:
+    std::vector<std::vector<MutCaptureSync>> mutCaptureSyncStack;
+
 public:
     CodeGen(const std::string& moduleName, const std::string& sourceFile = "");
     
@@ -82,6 +94,11 @@ public:
     
     llvm::Function* getPrintfDeclaration();
     
+    // Mutable capture sync stack management
+    void pushMutCaptureSyncs(std::vector<MutCaptureSync> syncs);
+    void popMutCaptureSyncs();
+    void emitMutCaptureSyncs();  // emit stores: local alloca → shared heap, top of stack
+
     void printModule();
     void writeObjectFile(const std::string& filename);
     void setSourceFileName(const std::string& filename);
