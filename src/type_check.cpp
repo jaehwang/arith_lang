@@ -183,11 +183,26 @@ void typeCheckNode(ASTNode* node, TypeEnv& env, const std::string& filename) {
     if (auto expr = dynamic_cast<ExprAST*>(node)) {
         // Handle assignments specially
         if (auto assign = dynamic_cast<AssignmentExprAST*>(expr)) {
-            // First infer RHS expression type (validates subexpressions)
-            TypeInfo rhsInfo = inferExprType(assign->getValue(), env, filename);
-
             const std::string& name = assign->getVarName();
             bool isMutDecl = assign->isMutableDeclaration();
+
+            // Detect self-referential function literal (recursive function):
+            // if RHS is a fn literal that references the LHS name in its body,
+            // pre-declare name as Function in the current scope so the body can see it.
+            if (!isMutDecl && !env.lookupCurrent(name)) {
+                if (auto* fnLit = dynamic_cast<FunctionLiteralAST*>(assign->getValue())) {
+                    if (functionBodyReferencesVar(fnLit, name)) {
+                        int pc = static_cast<int>(fnLit->getParams().size());
+                        env.declare(name, /*is_mutable=*/false, assign->getNameLocation(),
+                                    ValueType::Function, pc);
+                        inferExprType(assign->getValue(), env, filename);
+                        return;  // declaration already in place; skip normal flow
+                    }
+                }
+            }
+
+            // First infer RHS expression type (validates subexpressions)
+            TypeInfo rhsInfo = inferExprType(assign->getValue(), env, filename);
 
             if (isMutDecl) {
                 // Explicit mutable declaration always declares in current scope

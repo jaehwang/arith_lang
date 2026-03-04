@@ -83,6 +83,11 @@ public:
     const SourceLocation& getCallLocation() const { return call_location; }
 };
 
+// Returns true if varName appears as a free variable reference in fn's direct body
+// (not a parameter name, not an explicit capture name, not locally declared in body).
+// Does NOT recurse into nested FunctionLiteralAST nodes.
+bool functionBodyReferencesVar(const FunctionLiteralAST* fn, const std::string& varName);
+
 // ReturnStmtAST: return; or return expr;
 // AIDEV-NOTE: value is nullptr for bare return (void); checked at type-check in US-008
 class ReturnStmtAST : public ASTNode {

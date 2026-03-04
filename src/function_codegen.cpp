@@ -90,6 +90,20 @@ static void collectVarRefsAndDecls(ASTNode* node,
     }
 }
 
+// Public utility: returns true if varName is a free variable reference in fn's direct body.
+bool functionBodyReferencesVar(const FunctionLiteralAST* fn, const std::string& varName) {
+    std::vector<std::string> refs, decls;
+    collectVarRefsAndDecls(fn->getBody(), refs, decls);
+    std::set<std::string> excluded;
+    for (const auto& p : fn->getParams()) excluded.insert(p.name);
+    for (const auto& c : fn->getCaptures()) excluded.insert(c.name);
+    for (const auto& d : decls) excluded.insert(d);
+    for (const auto& r : refs) {
+        if (r == varName && !excluded.count(r)) return true;
+    }
+    return false;
+}
+
 // Compute the ordered list of immutable free variables for a function body.
 // Free vars: referenced in body, NOT in params, NOT in explicit mut() captures,
 // NOT locally declared in body, AND exist in the current outer CodeGen scope.
@@ -137,6 +151,15 @@ llvm::Value* FunctionLiteralAST::codegen() {
 
     // Compute immutable free variables while still in the outer scope
     auto freeVars = computeFreeVars(body.get(), params, captures, cg);
+
+    // Remove self-referential variable from freeVars: it won't be snapshotted (it's
+    // not in scope yet); instead a self-bundle will be reconstructed inside the body.
+    const std::string& selfRefVar = cg.getPendingSelfRefVar();
+    if (!selfRefVar.empty()) {
+        auto it = std::find(freeVars.begin(), freeVars.end(), selfRefVar);
+        if (it != freeVars.end()) freeVars.erase(it);
+    }
+
     int N_free = static_cast<int>(freeVars.size());
     int N_mut  = static_cast<int>(captures.size());
 
@@ -206,9 +229,10 @@ llvm::Value* FunctionLiteralAST::codegen() {
         }
     }
 
-    // Get envArg (last function argument) if there are any captures
+    // Always get envArg (last function argument — always present in the signature).
+    // Needed for capture loading and for self-bundle reconstruction in recursive functions.
     llvm::Value* envArg = nullptr;
-    if (N_free > 0 || N_mut > 0) {
+    {
         int i = 0;
         for (auto& arg : func->args()) {
             if (i == (int)params.size()) { envArg = &arg; break; }
@@ -255,6 +279,38 @@ llvm::Value* FunctionLiteralAST::codegen() {
     }
     // Always push (even empty) so ReturnStmtAST syncs the correct function's captures
     cg.pushMutCaptureSyncs(std::move(syncList));
+
+    // AIDEV-NOTE: Self-referential (recursive) function support.
+    // If this function literal is being assigned to variable selfRefVar, we reconstruct
+    // the closure bundle for that variable inside the inner function body. This lets the
+    // body call itself by name without the outer variable having existed at closure creation
+    // time. The self-bundle is: {ptrtoint(func), ptrtoint(envArg)} — same fn_ptr, same env.
+    // Each recursive call gets its own self-bundle allocation at runtime (via malloc).
+    if (!selfRefVar.empty()) {
+        auto* selfFnPtrI64 = cg.getBuilder().CreatePtrToInt(
+            func, llvm::Type::getInt64Ty(cg.getContext()), "self_fn_i64");
+        auto* selfEnvPtrI64 = envArg
+            ? cg.getBuilder().CreatePtrToInt(
+                  envArg, llvm::Type::getInt64Ty(cg.getContext()), "self_env_i64")
+            : llvm::ConstantInt::get(llvm::Type::getInt64Ty(cg.getContext()), 0);
+
+        auto* selfBundleMem = cg.getBuilder().CreateCall(
+            mallocFn,
+            {llvm::ConstantInt::get(llvm::Type::getInt64Ty(cg.getContext()), 16)},
+            "self_bundle");
+        cg.getBuilder().CreateStore(selfFnPtrI64, selfBundleMem);
+        auto* selfSlot1 = cg.getBuilder().CreateConstGEP1_64(
+            llvm::Type::getInt64Ty(cg.getContext()), selfBundleMem, 1, "self_bundle_slot1");
+        cg.getBuilder().CreateStore(selfEnvPtrI64, selfSlot1);
+
+        auto* selfBundlePtrI64 = cg.getBuilder().CreatePtrToInt(
+            selfBundleMem, llvm::Type::getInt64Ty(cg.getContext()), "self_bundle_i64");
+        auto* selfBundleDouble = cg.getBuilder().CreateBitCast(
+            selfBundlePtrI64, llvm::Type::getDoubleTy(cg.getContext()), "self_bundle_double");
+
+        auto* selfAlloca = cg.declareVariable(selfRefVar, /*is_mutable=*/false, SourceLocation{});
+        cg.getBuilder().CreateStore(selfBundleDouble, selfAlloca);
+    }
 
     // Codegen the body
     llvm::Value* bodyVal = nullptr;

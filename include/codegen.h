@@ -42,6 +42,12 @@ private:
     // Each entry is a list of {local_alloca, shared_heap_ptr} pairs. When a return
     // is emitted, emitMutCaptureSyncs() stores local values back to heap storage so
     // the shared state persists across closure calls.
+
+    // AIDEV-NOTE: Self-referential function support — set to the variable name being assigned
+    // to when generating a recursive function literal. FunctionLiteralAST::codegen() reads
+    // this to reconstruct the closure self-bundle inside the inner function body.
+    std::string pendingSelfRefVar;
+
 public:
     struct MutCaptureSync {
         llvm::AllocaInst* localAlloca;  // mutable local double alloca inside closure
@@ -98,6 +104,11 @@ public:
     void pushMutCaptureSyncs(std::vector<MutCaptureSync> syncs);
     void popMutCaptureSyncs();
     void emitMutCaptureSyncs();  // emit stores: local alloca → shared heap, top of stack
+
+    // Self-referential function support (for recursive functions)
+    void setPendingSelfRefVar(const std::string& name) { pendingSelfRefVar = name; }
+    void clearPendingSelfRefVar() { pendingSelfRefVar.clear(); }
+    const std::string& getPendingSelfRefVar() const { return pendingSelfRefVar; }
 
     void printModule();
     void writeObjectFile(const std::string& filename);

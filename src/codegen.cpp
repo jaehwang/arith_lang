@@ -1,5 +1,6 @@
 #include "codegen.h"
 #include "ast.h"
+#include "function_ast.h"
 #include "lexer.h"
 #include "parser.h" // for ParseError
 #include "llvm/IR/Type.h"
@@ -240,7 +241,23 @@ llvm::Value* BinaryExprAST::codegen() {
 }
 
 llvm::Value* AssignmentExprAST::codegen() {
+    // Detect self-referential function literal (recursive function):
+    // if the RHS is a fn literal that references the LHS variable in its body,
+    // set pendingSelfRefVar so FunctionLiteralAST::codegen() can build a self-bundle.
+    bool isSelfRef = false;
+    if (!is_mutable_declaration) {
+        if (auto* fnLit = dynamic_cast<FunctionLiteralAST*>(value.get())) {
+            if (functionBodyReferencesVar(fnLit, varName)) {
+                isSelfRef = true;
+                codeGenInstance->setPendingSelfRefVar(varName);
+            }
+        }
+    }
+
     llvm::Value* val = value->codegen();
+
+    if (isSelfRef) codeGenInstance->clearPendingSelfRefVar();
+
     if (!val) return nullptr;
 
     // Determine how to handle binding based on mutability and scope
