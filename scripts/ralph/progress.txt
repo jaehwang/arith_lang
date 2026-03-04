@@ -25,6 +25,34 @@
   - `getCodeGen()` needs a forward declaration in `function_codegen.cpp` since it is defined in `codegen.cpp`
 ---
 
+## 2026-03-04 - US-010
+- What was implemented: LLVM IR codegen for block-style function literals with explicit `return`
+- Files changed:
+  - `src/function_codegen.cpp`: Implemented `ReturnStmtAST::codegen()` (codegens return value, emits `llvm::ReturnInst`); extended `FunctionLiteralAST::codegen()` to handle `is_expression_function = false` by calling `body->codegen()` and adding implicit `ret 0.0` if block falls through without a return
+  - `src/codegen.cpp`: Added terminator check in `BlockAST::codegen()` loop — stops emitting into the block after a `ret` (or any terminator) is encountered
+  - `tests/k/function_block.k`: Integration test `triple = fn(x) { result = x * 3; return result; }; y = triple(14); print y;` → `42.000000000000000`
+- **Learnings for future iterations:**
+  - `BlockAST::codegen()` must check `GetInsertBlock()->getTerminator()` after each statement and break if terminated; otherwise it tries to emit into an already-terminated block (LLVM invariant violation)
+  - `ReturnStmtAST::codegen()` emits `CreateRet(retVal)` directly; the caller (`FunctionLiteralAST::codegen()`) must NOT emit another `ret` afterwards — use the `bodyVal != nullptr` guard that already exists
+  - For block-style functions, after `body->codegen()`, check `!GetInsertBlock()->getTerminator()` and add implicit `ret 0.0` for functions that fall through without a return statement
+  - The block body creates its own scope via `BlockAST::codegen()` → `enterScope()/exitScope()`; function params live in the outer scope created by `FunctionLiteralAST::codegen()` → two correctly nested scopes
+---
+
+## 2026-03-04 - US-011
+- What was implemented: Immutable closures — auto-capture of outer immutable variables by value at function definition time
+- Files changed:
+  - `src/function_codegen.cpp`: Complete rewrite of `FunctionLiteralAST::codegen()` and `FunctionCallAST::codegen()` to use a closure bundle approach; added `collectVarRefsAndDecls()` AST walker, `computeFreeVars()` helper, `getMalloc()` helper
+  - `tests/k/function_closure.k`: Integration test `multiplier = 10; scale = fn(x) => x * multiplier; result = scale(5); print result;` → `50.000000000000000`
+- **Learnings for future iterations:**
+  - Closure bundle encoding: `double` value now encodes a `ptr` to a 2-element `i64` array `{fn_ptr_i64, env_ptr_i64}` (was: just fn_ptr encoded directly). Call sites must decode this bundle.
+  - All generated LLVM functions take an extra `ptr env` as their LAST argument. For non-closure functions env is null (0) but the call site always passes it.
+  - Free variable detection: walk AST body, collect VariableExprAST names (reads) and AssignmentExprAST names (local decls); free = reads - (params ∪ local_decls ∪ explicit_captures); filter to those that exist in outer CodeGen scope.
+  - Immutable captures are shadowed in the inner function scope: `cg.declareVariable(varName, false, {})` creates a new inner-function alloca with the same name as the outer var, then the loaded-from-env value is stored there. This prevents the inner function from touching the outer alloca (which would be invalid LLVM IR).
+  - Heap allocation for env array: `malloc(N * 8)` where N is number of captures; each captured double is stored at offset `i * 8`. Same pattern for the 16-byte closure bundle.
+  - `collectVarRefsAndDecls` does NOT recurse into nested `FunctionLiteralAST` nodes (they have their own scope).
+  - This change breaks backward compatibility of the double-encoded function value: it now encodes a closure bundle ptr, not a raw function ptr. All call sites must use the new bundle decoding path.
+---
+
 ## Codebase Patterns
 - Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
 - FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
@@ -38,7 +66,10 @@
 - Function calls use postfix parsing: parsePostfixExpr() wraps parsePrimary() in a loop checking for TOK_LPAREN; parseUnaryExpr() calls parsePostfixExpr() instead of parsePrimary()
 - Type checker uses TypeInfo {ValueType type, int param_count} to propagate function arity from inferExprType; SymbolInfo has is_parameter flag to block immutable param reassignment
 - Type checker handles FunctionLiteralAST in inferExprType: validates dup params, capture validity, then enters function scope, declares params, type-checks body, exits scope
-- Function pointers stored as double in allocas via ptrtoint (ptr→i64) + bitcast (i64→double); decoded by bitcast (double→i64) + inttoptr (i64→ptr) before indirect calls
+- Function values stored as double encoding a ptr to closure bundle {fn_ptr_i64, env_ptr_i64} (2-element i64 array, heap allocated via malloc). env=0 means no captures.
+- All generated LLVM functions take an extra `ptr env` as their LAST arg; call sites always pass env from the decoded bundle.
+- Immutable captures auto-detected by scanning body AST (collectVarRefsAndDecls); free = reads - (params ∪ local_decls ∪ explicit_mut_captures) ∩ outer_scope
+- Captures are shadowed in inner scope via cg.declareVariable(varName, false, {}) + store(loaded_from_env); prevents invalid cross-function alloca references.
 - FunctionLiteralAST::codegen() saves/restores builder insert block around inner function body generation; uses cg.enterScope()/exitScope() for param scope
 - Indirect LLVM calls require explicit FunctionType* in CreateCall(funcType, fnPtr, args) with opaque pointers (LLVM 15+)
 
