@@ -54,15 +54,22 @@ llvm::Value* FunctionLiteralAST::codegen() {
         }
     }
 
-    // Codegen the body (expression function: body is an ExprAST)
+    // Codegen the body
     llvm::Value* bodyVal = nullptr;
     if (is_expression_function) {
         auto* bodyExpr = dynamic_cast<ExprAST*>(body.get());
         if (bodyExpr) {
             bodyVal = bodyExpr->codegen();
         }
+    } else {
+        // Block-style: generate all statements; ReturnStmtAST emits ret directly
+        body->codegen();
+        // If control falls through without a return, add implicit ret 0.0
+        if (!cg.getBuilder().GetInsertBlock()->getTerminator()) {
+            cg.getBuilder().CreateRet(
+                llvm::ConstantFP::get(cg.getContext(), llvm::APFloat(0.0)));
+        }
     }
-    // Block-style functions (US-010) are handled in ReturnStmtAST::codegen()
 
     cg.exitScope();
 
@@ -109,7 +116,15 @@ llvm::Value* FunctionCallAST::codegen() {
     return cg.getBuilder().CreateCall(funcType, fnPtr, argValues, "calltmp");
 }
 
-// AIDEV-TODO: US-010 - implement ReturnStmtAST codegen (llvm::ReturnInst)
 llvm::Value* ReturnStmtAST::codegen() {
-    return nullptr;
+    auto& cg = getCodeGen();
+    llvm::Value* retVal;
+    if (value) {
+        retVal = value->codegen();
+        if (!retVal) return nullptr;
+    } else {
+        retVal = llvm::ConstantFP::get(cg.getContext(), llvm::APFloat(0.0));
+    }
+    cg.getBuilder().CreateRet(retVal);
+    return retVal;
 }

@@ -513,6 +513,10 @@ llvm::Value* BlockAST::codegen() {
     for (const auto& stmt : statements) {
         lastValue = stmt->codegen();
         if (!lastValue) return nullptr;
+        // Stop emitting into this block if it was already terminated (e.g. by return)
+        if (codeGenInstance->getBuilder().GetInsertBlock()->getTerminator()) {
+            break;
+        }
     }
     codeGenInstance->exitScope();
     // Return the last statement's value, or 0.0 if no statements
