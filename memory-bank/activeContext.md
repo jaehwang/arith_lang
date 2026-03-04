@@ -1,15 +1,43 @@
 # Active Context: ArithLang Current State
 
 ## Current Focus
-The ArithLang compiler has **FULLY ACHIEVED** complete negative test suite success and comprehensive type checking integration. ALL development goals for type safety and syntax validation have been **COMPLETED**:
+The ArithLang compiler has **FULLY ACHIEVED** first-class functions and lexical closures implementation. ALL development goals from the function implementation plan have been **COMPLETED**:
 
-- **✅ 100% Negative Test Success**: All 91 negative test cases now passing (100% success rate)
-- **✅ Type Checking System**: Fully integrated comprehensive type validation pipeline
-- **✅ Complete Syntax Validation**: Enhanced parser and type checker with robust error detection
-- **✅ Production-Ready Error Handling**: Complete systematic type safety and syntax validation
-- **✅ String Type Safety**: All string literal type violations properly detected and prevented
+- **✅ First-Class Functions**: `fn(params) => expr` and `fn(params) { block }` syntax fully working
+- **✅ Lexical Closures**: Immutable captures by default, working across all closure scenarios
+- **✅ Mutable Closures**: Explicit `mut(var)` capture syntax for shared mutable state
+- **✅ Higher-Order Functions**: Functions as values, passed to/returned from other functions
+- **✅ Recursive Functions**: Self-referential functions via named bindings
+- **✅ LLVM Code Generation**: Complete closure struct + function pointer IR generation
+- **✅ 37/37 Integration Tests**: All tests passing including all 6 function integration tests
+- **✅ 11/11 Unit Test Suites**: All unit tests passing including FunctionParserTests
 
-## Update (2025-08-17): Comprehensive Error Location Tracking ✅ **LATEST**
+## Update (2026-03-04): First-Class Functions & Closures ✅ **LATEST**
+
+- ✅ **Lexer**: Added `TOK_FN`, `TOK_RETURN`, `TOK_ARROW` (`=>`) tokens
+- ✅ **AST** (`include/function_ast.h`): New node classes
+  - `FunctionLiteralAST`: parameters, captures, body (expression or block)
+  - `FunctionCallAST`: callee expression + argument list
+  - `ReturnStmtAST`: optional return value
+- ✅ **Parser** (`src/parser.cpp`): `parseFunctionLiteral()`, `parseFunctionCall()`, `parseReturnStatement()`, `parseParameterList()`, `parseCaptureClause()`
+- ✅ **Type Checker** (`src/type_check.cpp`): validates function literals, call arity, return statements, captured variable existence & mutability
+- ✅ **Code Generation** (`src/function_codegen.cpp`): Closure struct layout, LLVM function creation, immutable/mutable capture encoding, call instruction generation
+- ✅ **Tests**: `tests/test_function_parser.cpp` (FunctionParserTests), `tests/k/function_*.k` (6 integration tests)
+
+### User Stories completed (US-007 – US-015):
+| Story | Feature |
+|-------|---------|
+| US-007 | Parse function call expressions |
+| US-008 | Type-check functions and calls |
+| US-009 | Generate LLVM IR for expression functions |
+| US-010 | Generate LLVM IR for block functions with return |
+| US-011 | Implement immutable closures |
+| US-012 | Implement mutable closures |
+| US-013 | Support higher-order functions |
+| US-014 | Support recursive functions |
+| US-015 | Update syntax specification and README |
+
+## Update (2025-08-17): Comprehensive Error Location Tracking ✅ **PREVIOUS**
 
 - ✅ **Professional-Grade Error Location Reporting**: Complete overhaul of error location tracking
   - Added location information to all AST nodes: `NumberExprAST`, `StringLiteralAST`, `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`
@@ -278,12 +306,10 @@ With comprehensive negative testing in place, future development will focus on e
 
 ### LONG-TERM PRIORITY: Advanced Language Features 🔮
 
-With robust parsing foundation in place, longer-term development focus areas:
+With robust parsing foundation and full function/closure support in place, longer-term development focus areas:
 
-1. **Function Definitions** 🔮
-   - User-defined functions with parameters and return values
-   - Function call syntax and code generation
-   - Local variable scoping within functions
+1. **Function Definitions** ✅ **COMPLETED** (US-007 – US-015)
+   - First-class functions, closures, higher-order functions, recursion all implemented
 
 2. **Enhanced Data Types** 🔮
    - Array support with indexing operations

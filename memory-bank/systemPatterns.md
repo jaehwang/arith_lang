@@ -158,10 +158,14 @@ static std::unique_ptr<NumberNode> create(double value);
 - **Expression Nodes**: `NumberExprAST`, `VariableExprAST`, `BinaryExprAST`
 - **Statement Nodes**: `PrintStmtAST`, `IfStmtAST`, `WhileStmtAST`, `BlockAST`
 - **Assignment**: `AssignmentExprAST` (bridge between expression and statement)
+- **Function Nodes** (`include/function_ast.h`): ✅ **NEW**
+  - `FunctionLiteralAST`: parameters (`FunctionParameter[]`), captures (`CapturedVariable[]`), body
+  - `FunctionCallAST`: callee `ExprAST*` + argument list
+  - `ReturnStmtAST`: optional return value expression
 
 ### 5. Code Generation
-**Location**: `src/codegen.cpp`, `include/codegen.h`
-**Pattern**: Visitor pattern over AST nodes
+**Location**: `src/codegen.cpp`, `src/function_codegen.cpp`, `include/codegen.h`
+**Pattern**: Visitor pattern over AST nodes; function codegen split into separate file
 
 **LLVM Integration Pattern**:
 ```cpp
@@ -436,6 +440,13 @@ main.cpp → parser.h → lexer.h → type_check.h → ast.h → codegen.h
 2. Add parsing method
 3. Implement codegen method
 4. Update statement parsing dispatcher
+
+### Function/Closure Pattern ✅ **IMPLEMENTED**
+- Function literals are first-class expressions: `fn(x) => x * 2`
+- Closures use LLVM struct to pack captured values alongside function pointer
+- Immutable captures: values copied into struct at closure creation
+- Mutable captures (`mut(var)`): shared via pointer; original variable must be `mut`
+- `function_codegen.cpp` handles all function/closure IR emission
 
 ### Adding New Data Types
 1. Extend type system in codegen

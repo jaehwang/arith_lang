@@ -139,20 +139,25 @@ All compiler phases are **fully implemented and optimized**:
 - **Arithmetic**: `+`, `-`, `*`, `/` with proper precedence
 - **Unary Expressions**: `-` (unary minus) with proper precedence handling
 - **Comparison**: `>`, `<`, `>=`, `<=`, `==`, `!=`
-- **Variables**: Declaration, assignment, and reference
-- **I/O**: Print statements for output
+- **Variables**: Declaration, assignment, and reference (immutable-by-default, `mut` for mutable)
+- **I/O**: Print statements for output (including printf-style format strings)
 - **Control Flow**: `if-else` conditionals and `while` loops
 - **Comments**: `//` line comments
 - **Expressions**: Complex nested expressions with parentheses
+- **First-Class Functions**: `fn(params) => expr` and `fn(params) { block }` syntax ✅ **NEW**
+- **Closures**: Immutable captures by default; `mut(var)` for mutable captures ✅ **NEW**
+- **Higher-Order Functions**: Functions as values, passed to/returned from functions ✅ **NEW**
+- **Recursive Functions**: Self-referential functions via named bindings ✅ **NEW**
 
 ### Test Coverage
 ```
-Lexer Tests:     21/21 ✅ (100%) [includes string literal tokenization]
-Parser Tests:    23/23 ✅ (100%) [includes negative test cases]
-Negative Tests:  91/91 ✅ (100%) [comprehensive error validation]
-Codegen Tests:   11/11 ✅ (100%) [includes advanced printf code generation]
-Integration:     25/25 ✅ (100%) [end-to-end functionality + 6 new error location tests]
-Total:          171/171 ✅ (100%) [PERFECT TEST COVERAGE WITH ERROR LOCATION TESTS]
+Unit Test Suites: 11/11 ✅ (100%) [ctest: all suites pass]
+  - LexerTests, ParserTests, ParserNegativeTests (91 cases)
+  - CodeGenTests, IntegrationTests, SourceLocationTests
+  - ParserErrorHelpersTests, ErrorDisplayTests
+  - IntegrationErrorReportingTests, MutabilityTests
+  - FunctionParserTests ✅ NEW
+Integration:      37/37 ✅ (100%) [test_runner.sh, includes 6 function_*.k tests]
 ```
 
 ### Test Suite Modernization ✅
@@ -275,9 +280,8 @@ Complete printf-like functionality is documented in **`specs/print.md`** includi
 
 ### Potential Enhancements
 1. **Enhanced Diagnostics**: More detailed error messages with suggestions
-  - Propagate `SourceRange` into AST/type checker to remove heuristic location inference in type errors
-2. **Optimization**: LLVM optimization pass integration  
-3. **Language Extensions**: Functions, arrays, or advanced data types
+2. **Optimization**: LLVM optimization pass integration
+3. **Language Extensions**: Arrays, advanced data types (functions ✅ complete)
 4. **IDE Support**: Language server protocol implementation
 
 ### Maintenance Focus
