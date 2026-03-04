@@ -1,3 +1,16 @@
+## 2026-03-04 - US-008
+- What was implemented: Extended type_check.cpp to validate function literals and calls
+- Files changed:
+  - `src/type_check.cpp`: Added `ValueType::Function`; added `TypeInfo` struct to return type+param_count from `inferExprType`; added `is_parameter` flag to `SymbolInfo`; added `param_count` to `SymbolInfo`; extended `inferExprType` to handle `FunctionLiteralAST` (dup params, capture validation, body type-check) and `FunctionCallAST` (arity check); extended `typeCheckNode` to handle `ReturnStmtAST`; immutable parameter reassignment now errors via `is_parameter` check
+  - `tests/test_function_parser.cpp`: Added `#include "type_check.h"`; added 12 new type-check tests covering: duplicate params, undeclared capture, immutable capture, arg count mismatch (too few/too many), valid calls, immutable param reassignment, mutable param reassignment OK
+- **Learnings for future iterations:**
+  - `inferExprType` was changed to return `TypeInfo {ValueType type, int param_count}` to propagate function arity; all callers needed updating
+  - `SymbolInfo` now has `is_parameter` flag to distinguish function params from regular variables; immutable params are not silently shadowed like regular outer variables
+  - The BlockAST handler in `typeCheckNode` creates its own scope; function literal handler creates a separate function scope first; body params live in the function scope, body locals in the block scope — two nested scopes, correct semantics
+  - For expression-body functions (`fn(x) => expr`), the body is an ExprAST stored as ASTNode*; `typeCheckNode` dispatches it via the ExprAST branch to `typeCheckExpr` — no special casing needed
+  - Tests for type-check errors parse a full program first, then call `typeCheck(program.get())` and `EXPECT_THROW(..., ParseError)`
+---
+
 ## Codebase Patterns
 - Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
 - FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
@@ -9,6 +22,8 @@
 - Unit tests use Google Test; individual test files in `tests/test_*.cpp`; run via `cd build && ctest`
 - Parser tracks `functionDepth` (private int) to distinguish return inside function body from top-level return
 - Function calls use postfix parsing: parsePostfixExpr() wraps parsePrimary() in a loop checking for TOK_LPAREN; parseUnaryExpr() calls parsePostfixExpr() instead of parsePrimary()
+- Type checker uses TypeInfo {ValueType type, int param_count} to propagate function arity from inferExprType; SymbolInfo has is_parameter flag to block immutable param reassignment
+- Type checker handles FunctionLiteralAST in inferExprType: validates dup params, capture validity, then enters function scope, declares params, type-checks body, exits scope
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
