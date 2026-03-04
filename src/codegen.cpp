@@ -127,7 +127,7 @@ llvm::Function* CodeGen::getPrintfDeclaration() {
     if (!printfFunc) {
         llvm::FunctionType* printfType = llvm::FunctionType::get(
             llvm::Type::getInt32Ty(*context),
-            {llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(*context))}, 
+            {llvm::PointerType::getUnqual(*context)}, 
             true
         );
         printfFunc = llvm::Function::Create(
