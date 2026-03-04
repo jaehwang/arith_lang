@@ -53,6 +53,21 @@
   - This change breaks backward compatibility of the double-encoded function value: it now encodes a closure bundle ptr, not a raw function ptr. All call sites must use the new bundle decoding path.
 ---
 
+## 2026-03-04 - US-012
+- What was implemented: Mutable closures — heap-allocated shared doubles for mut() captures
+- Files changed:
+  - `include/codegen.h`: Added `MutCaptureSync` struct and `pushMutCaptureSyncs` / `popMutCaptureSyncs` / `emitMutCaptureSyncs` methods; added `mutCaptureSyncStack` private member
+  - `src/codegen.cpp`: Implemented sync stack methods; `emitMutCaptureSyncs()` emits `load + store` for each `{localAlloca, sharedPtr}` pair on top of stack
+  - `src/function_codegen.cpp`: Extended `FunctionLiteralAST::codegen()` to allocate heap doubles for mutable captures in outer scope, load them inside inner function, set up local mutable allocas, and sync before ret; `ReturnStmtAST::codegen()` calls `emitMutCaptureSyncs()` before `CreateRet`
+  - `tests/k/function_mutable_capture.k`: Integration test `mut counter = 0; increment = fn() mut(counter) {...}; x = increment(); print x; y = increment(); print y;` → 1.0, 2.0
+- **Learnings for future iterations:**
+  - Mutable captures use heap doubles: outer scope `malloc(8)` + copy-init, env stores ptr-as-i64 at `env[N_free + j]` (using `GEP(i64, env, offset)` — same 8-byte slot as doubles since `sizeof(i64)==8`)
+  - The sync stack (`mutCaptureSyncStack`) is always pushed/popped for every `FunctionLiteralAST::codegen()` call (even empty), ensuring nested function literals don't accidentally sync outer captures
+  - `emitMutCaptureSyncs()` checks the top of stack; `ReturnStmtAST::codegen()` and block fallthrough both call it before `CreateRet`
+  - `counter` in test must be `mut counter = 0` (type checker requires captured vars to be declared mutable)
+  - `capturedValues` (immutable) and `mutCapturedPtrs` (mutable) are computed in outer context BEFORE `SetInsertPoint(entryBB)` — these LLVM Values are then used after restoring the insert point to populate the env array
+---
+
 ## Codebase Patterns
 - Function AST nodes live in include/function_ast.h (separate from ast.h); codegen stubs in src/function_codegen.cpp
 - FunctionLiteralAST inherits ExprAST; ReturnStmtAST inherits ASTNode (not ExprAST, it's a statement)
@@ -72,6 +87,8 @@
 - Captures are shadowed in inner scope via cg.declareVariable(varName, false, {}) + store(loaded_from_env); prevents invalid cross-function alloca references.
 - FunctionLiteralAST::codegen() saves/restores builder insert block around inner function body generation; uses cg.enterScope()/exitScope() for param scope
 - Indirect LLVM calls require explicit FunctionType* in CreateCall(funcType, fnPtr, args) with opaque pointers (LLVM 15+)
+- Mutable captures: heap malloc(8) per var; env[N_free+j] stores ptr-as-i64 (GEP(i64,env,idx)); inside fn: load ptr, read/write through it; sync stack in CodeGen (MutCaptureSync) handles copy-back before ret
+- Always push/pop sync stack in FunctionLiteralAST::codegen() (even empty list) to prevent nested fn from syncing wrong function's captures
 
 # Ralph Progress Log
 Started: Tue Mar  3 05:28:23 PM KST 2026
