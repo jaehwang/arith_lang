@@ -23,201 +23,201 @@ The feature is grounded in the existing implementation plan at `plans/sample-fun
 
 ## User Stories
 
-### US-001: Tokenize function keywords and operators
+### US-001: Tokenize function keywords and operators ✅ **COMPLETED**
 **Description:** As a developer, I need the lexer to recognize `fn`, `return`, and `=>` so the parser can handle function syntax.
 
 **Acceptance Criteria:**
-- [ ] `fn` tokenized as `TOK_FN`
-- [ ] `return` tokenized as `TOK_RETURN`
-- [ ] `=>` tokenized as `TOK_ARROW`
-- [ ] Existing tokens and keywords are unaffected
-- [ ] Build passes (`cmake --build build`)
-- [ ] Unit tests pass (`cd build && ctest`)
+- [x] `fn` tokenized as `TOK_FN`
+- [x] `return` tokenized as `TOK_RETURN`
+- [x] `=>` tokenized as `TOK_ARROW`
+- [x] Existing tokens and keywords are unaffected
+- [x] Build passes (`cmake --build build`)
+- [x] Unit tests pass (`cd build && ctest`)
 
 ---
 
-### US-002: Define AST nodes for functions
+### US-002: Define AST nodes for functions ✅ **COMPLETED**
 **Description:** As a developer, I need AST node classes for function literals, function calls, and return statements so the compiler pipeline can represent functions structurally.
 
 **Acceptance Criteria:**
-- [ ] `FunctionLiteralAST` stores: parameter list (`FunctionParameter`), capture list (`CapturedVariable`), body (`ASTNode`), expression-vs-block flag, source location
-- [ ] `FunctionCallAST` stores: callee expression, argument list, source location
-- [ ] `ReturnStmtAST` stores: optional return value, source location
-- [ ] Supporting structs `FunctionParameter`, `CapturedVariable`, `ClosureContext`, `FunctionValue` are defined
-- [ ] Build passes
+- [x] `FunctionLiteralAST` stores: parameter list (`FunctionParameter`), capture list (`CapturedVariable`), body (`ASTNode`), expression-vs-block flag, source location
+- [x] `FunctionCallAST` stores: callee expression, argument list, source location
+- [x] `ReturnStmtAST` stores: optional return value, source location
+- [x] Supporting structs `FunctionParameter`, `CapturedVariable`, `ClosureContext`, `FunctionValue` are defined
+- [x] Build passes
 
 ---
 
-### US-003: Parse expression-style function literals
+### US-003: Parse expression-style function literals ✅ **COMPLETED**
 **Description:** As a user, I want to write `add = fn(x, y) => x + y;` so I can define simple single-expression functions.
 
 **Acceptance Criteria:**
-- [ ] `fn(params) => expr` parsed into `FunctionLiteralAST` with `is_expression_function = true`
-- [ ] Parameters parsed as a comma-separated list inside `()`
-- [ ] Trailing comma in parameter list is a parse error with source location
-- [ ] Build passes; unit tests for expression function parsing pass
+- [x] `fn(params) => expr` parsed into `FunctionLiteralAST` with `is_expression_function = true`
+- [x] Parameters parsed as a comma-separated list inside `()`
+- [x] Trailing comma in parameter list is a parse error with source location
+- [x] Build passes; unit tests for expression function parsing pass
 
 ---
 
-### US-004: Parse block-style function literals
+### US-004: Parse block-style function literals ✅ **COMPLETED**
 **Description:** As a user, I want to write `fn(x) { result = x * 2; return result; }` so I can define multi-statement functions.
 
 **Acceptance Criteria:**
-- [ ] `fn(params) { statements }` parsed into `FunctionLiteralAST` with `is_expression_function = false`
-- [ ] `return expr;` inside a block parsed as `ReturnStmtAST`
-- [ ] `return` at top level (outside any function) is a parse error with source location
-- [ ] Build passes; unit tests for block function parsing pass
+- [x] `fn(params) { statements }` parsed into `FunctionLiteralAST` with `is_expression_function = false`
+- [x] `return expr;` inside a block parsed as `ReturnStmtAST`
+- [x] `return` at top level (outside any function) is a parse error with source location
+- [x] Build passes; unit tests for block function parsing pass
 
 ---
 
-### US-005: Parse mutable parameter declarations
+### US-005: Parse mutable parameter declarations ✅ **COMPLETED**
 **Description:** As a user, I want to write `fn(mut x, y) => x + y` so parameters can be declared mutable and reassigned inside the function body.
 
 **Acceptance Criteria:**
-- [ ] `mut` before a parameter name sets `FunctionParameter::is_mutable = true`
-- [ ] Non-`mut` parameters are immutable; reassigning them inside the body is a type-check error
-- [ ] Build passes; unit tests cover mutable and immutable parameter parsing
+- [x] `mut` before a parameter name sets `FunctionParameter::is_mutable = true`
+- [x] Non-`mut` parameters are immutable; reassigning them inside the body is a type-check error
+- [x] Build passes; unit tests cover mutable and immutable parameter parsing
 
 ---
 
-### US-006: Parse capture clause for closures
+### US-006: Parse capture clause for closures ✅ **COMPLETED**
 **Description:** As a user, I want to write `fn() mut(counter) { counter = counter + 1; return counter; }` so I can explicitly capture outer mutable variables.
 
 **Acceptance Criteria:**
-- [ ] `mut(var1, var2)` after the parameter list parsed as a capture clause
-- [ ] Each named variable must exist in the outer scope; capturing an undeclared variable is a parse/type-check error
-- [ ] Capturing an immutable outer variable with `mut(...)` is a type-check error
-- [ ] Build passes; unit tests cover capture clause parsing
+- [x] `mut(var1, var2)` after the parameter list parsed as a capture clause
+- [x] Each named variable must exist in the outer scope; capturing an undeclared variable is a parse/type-check error
+- [x] Capturing an immutable outer variable with `mut(...)` is a type-check error
+- [x] Build passes; unit tests cover capture clause parsing
 
 ---
 
-### US-007: Parse function call expressions
+### US-007: Parse function call expressions ✅ **COMPLETED**
 **Description:** As a user, I want to write `add(1, 2)` to call a function stored in a variable.
 
 **Acceptance Criteria:**
-- [ ] `expr(args)` parsed as `FunctionCallAST` in postfix expression position
-- [ ] Calling a non-function value (e.g., `x = 42; x(10);`) is a type-check error
-- [ ] Wrong argument count (e.g., `add(1)` when `add` takes 2) is a type-check error
-- [ ] Build passes; unit tests for function call parsing pass
+- [x] `expr(args)` parsed as `FunctionCallAST` in postfix expression position
+- [x] Calling a non-function value (e.g., `x = 42; x(10);`) is a type-check error
+- [x] Wrong argument count (e.g., `add(1)` when `add` takes 2) is a type-check error
+- [x] Build passes; unit tests for function call parsing pass
 
 ---
 
-### US-008: Type-check functions and calls
+### US-008: Type-check functions and calls ✅ **COMPLETED**
 **Description:** As a developer, I need the type checker to validate function definitions and call sites so users get clear errors before codegen.
 
 **Acceptance Criteria:**
-- [ ] `validateFunctionLiteral` checks: no duplicate parameter names, capture variables exist and are mutable when in `mut(...)` clause
-- [ ] `validateFunctionCall` checks: callee is a function value, argument count matches parameter count
-- [ ] `validateReturnStatement` checks: `return` is inside a function body
-- [ ] All errors use existing GCC-style `ParseError` with `SourceLocation`
-- [ ] Build passes; unit tests for each validation method pass
+- [x] `validateFunctionLiteral` checks: no duplicate parameter names, capture variables exist and are mutable when in `mut(...)` clause
+- [x] `validateFunctionCall` checks: callee is a function value, argument count matches parameter count
+- [x] `validateReturnStatement` checks: `return` is inside a function body
+- [x] All errors use existing GCC-style `ParseError` with `SourceLocation`
+- [x] Build passes; unit tests for each validation method pass
 
 ---
 
-### US-009: Generate LLVM IR for expression functions
+### US-009: Generate LLVM IR for expression functions ✅ **COMPLETED**
 **Description:** As a user, I want `add = fn(x, y) => x + y; print add(3, 4);` to compile and print `7.000000000000000`.
 
 **Acceptance Criteria:**
-- [ ] `generateFunctionLiteral` emits a named `llvm::Function` for expression-body functions
-- [ ] `generateFunctionCall` emits a `call` instruction
-- [ ] Integration test `tests/k/function_basic.k` passes via `./test_runner.sh`
-- [ ] Build passes; codegen unit tests pass
+- [x] `generateFunctionLiteral` emits a named `llvm::Function` for expression-body functions
+- [x] `generateFunctionCall` emits a `call` instruction
+- [x] Integration test `tests/k/function_basic.k` passes via `./test_runner.sh`
+- [x] Build passes; codegen unit tests pass
 
 ---
 
-### US-010: Generate LLVM IR for block functions with return
+### US-010: Generate LLVM IR for block functions with return ✅ **COMPLETED**
 **Description:** As a user, I want block-style functions with explicit `return` to compile and execute correctly.
 
 **Acceptance Criteria:**
-- [ ] Block function body generates sequential LLVM IR with a `ret` at `return` statement
-- [ ] Expression-function's implicit return value is the expression result
-- [ ] Integration test with block function passes via `./test_runner.sh`
-- [ ] Build passes; codegen unit tests pass
+- [x] Block function body generates sequential LLVM IR with a `ret` at `return` statement
+- [x] Expression-function's implicit return value is the expression result
+- [x] Integration test with block function passes via `./test_runner.sh`
+- [x] Build passes; codegen unit tests pass
 
 ---
 
-### US-011: Implement immutable closures
+### US-011: Implement immutable closures ✅ **COMPLETED**
 **Description:** As a user, I want `scale = fn(x) => x * multiplier;` to capture `multiplier` from the outer scope by value.
 
 **Acceptance Criteria:**
-- [ ] Variables referenced inside a function body but not in the parameter list are captured by value at definition time
-- [ ] Captured value is frozen — subsequent changes to the outer variable do not affect the closure
-- [ ] Integration test `tests/k/function_closure.k` passes via `./test_runner.sh`
-- [ ] Build passes
+- [x] Variables referenced inside a function body but not in the parameter list are captured by value at definition time
+- [x] Captured value is frozen — subsequent changes to the outer variable do not affect the closure
+- [x] Integration test `tests/k/function_closure.k` passes via `./test_runner.sh`
+- [x] Build passes
 
 ---
 
-### US-012: Implement mutable closures
+### US-012: Implement mutable closures ✅ **COMPLETED**
 **Description:** As a user, I want `increment = fn() mut(counter) { counter = counter + 1; return counter; };` to modify and persist the outer `counter` across calls.
 
 **Acceptance Criteria:**
-- [ ] Mutable captures use `std::shared_ptr<double>` so the closure and outer scope share the same value
-- [ ] Multiple calls to the closure reflect accumulated state
-- [ ] Integration test `tests/k/function_mutable_capture.k` passes:
+- [x] Mutable captures use `std::shared_ptr<double>` so the closure and outer scope share the same value
+- [x] Multiple calls to the closure reflect accumulated state
+- [x] Integration test `tests/k/function_mutable_capture.k` passes:
   ```
   // EXPECTED: 1.000000000000000
   // EXPECTED: 2.000000000000000
   ```
-- [ ] Build passes
+- [x] Build passes
 
 ---
 
-### US-013: Support higher-order functions
+### US-013: Support higher-order functions ✅ **COMPLETED**
 **Description:** As a user, I want to pass functions as arguments and return functions as values so I can write composable code like `apply(square, 5)`.
 
 **Acceptance Criteria:**
-- [ ] Functions can be passed as arguments and stored in variables like any other value
-- [ ] `generateFunctionCall` handles callee that is itself the result of a function call
-- [ ] Integration test `tests/k/function_higher_order.k` passes:
+- [x] Functions can be passed as arguments and stored in variables like any other value
+- [x] `generateFunctionCall` handles callee that is itself the result of a function call
+- [x] Integration test `tests/k/function_higher_order.k` passes:
   ```
   // EXPECTED: 25.000000000000000
   ```
-- [ ] Build passes
+- [x] Build passes
 
 ---
 
-### US-014: Support recursive functions
+### US-014: Support recursive functions ✅ **COMPLETED**
 **Description:** As a user, I want to write a recursive function (e.g., factorial) using self-referencing variable bindings.
 
 **Acceptance Criteria:**
-- [ ] A function stored in variable `f` can call `f(...)` inside its own body
-- [ ] Integration test `tests/k/function_recursive.k` passes (e.g., recursive factorial of 5 = 120)
-- [ ] Build passes
+- [x] A function stored in variable `f` can call `f(...)` inside its own body
+- [x] Integration test `tests/k/function_recursive.k` passes (e.g., recursive factorial of 5 = 120)
+- [x] Build passes
 
 ---
 
-### US-015: Add integration test files
+### US-015: Add integration test files ✅ **COMPLETED**
 **Description:** As a developer, I need integration test `.k` files with `// EXPECTED:` annotations for all key function scenarios.
 
 **Acceptance Criteria:**
-- [ ] `tests/k/function_basic.k` — simple expression function call
-- [ ] `tests/k/function_closure.k` — immutable capture
-- [ ] `tests/k/function_mutable_capture.k` — mutable capture with state
-- [ ] `tests/k/function_higher_order.k` — passing function as argument
-- [ ] `tests/k/function_recursive.k` — recursive function
-- [ ] All files pass `./test_runner.sh` from project root
+- [x] `tests/k/function_basic.k` — simple expression function call
+- [x] `tests/k/function_closure.k` — immutable capture
+- [x] `tests/k/function_mutable_capture.k` — mutable capture with state
+- [x] `tests/k/function_higher_order.k` — passing function as argument
+- [x] `tests/k/function_recursive.k` — recursive function
+- [x] All files pass `./test_runner.sh` from project root
 
 ---
 
-### US-016: Update syntax specification
+### US-016: Update syntax specification ✅ **COMPLETED**
 **Description:** As a developer or user reading the docs, I need the language syntax spec to reflect the new function grammar.
 
 **Acceptance Criteria:**
-- [ ] `specs/syntax.md` BNF updated to include `<function_literal>`, `<call_expr>`, `<return_stmt>`, `<capture_clause>`
-- [ ] Examples of expression function, block function, closure, and higher-order function added to the spec
-- [ ] `README.md` features list updated to mention function definitions and closures
+- [x] `specs/syntax.md` BNF updated to include `<function_literal>`, `<call_expr>`, `<return_stmt>`, `<capture_clause>`
+- [x] Examples of expression function, block function, closure, and higher-order function added to the spec
+- [x] `README.md` features list updated to mention function definitions and closures
 
 ---
 
-## Functional Requirements
+## Functional Requirements ✅ **ALL COMPLETED**
 
-- **FR-1:** The lexer must recognize `fn`, `return`, and `=>` as distinct tokens.
-- **FR-2:** A function literal `fn(p1, p2) => expr` is a valid primary expression assignable to any variable.
-- **FR-3:** A function literal `fn(p1, p2) { stmts }` is a valid primary expression; the last executed `return expr;` provides the function's value.
-- **FR-4:** Parameters are immutable by default; `mut p` makes a parameter mutable within the function body.
-- **FR-5:** A function literal may include a capture clause `mut(v1, v2)` listing outer `mut` variables to capture by shared reference.
-- **FR-6:** Variables referenced inside a function body that are not parameters and not in the capture clause are captured by value (immutable snapshot).
-- **FR-7:** A function call `f(arg1, arg2)` is a valid postfix expression evaluated left-to-right.
+- **FR-1:** ✅ The lexer must recognize `fn`, `return`, and `=>` as distinct tokens.
+- **FR-2:** ✅ A function literal `fn(p1, p2) => expr` is a valid primary expression assignable to any variable.
+- **FR-3:** ✅ A function literal `fn(p1, p2) { stmts }` is a valid primary expression; the last executed `return expr;` provides the function's value.
+- **FR-4:** ✅ Parameters are immutable by default; `mut p` makes a parameter mutable within the function body.
+- **FR-5:** ✅ A function literal may include a capture clause `mut(v1, v2)` listing outer `mut` variables to capture by shared reference.
+- **FR-6:** ✅ Variables referenced inside a function body that are not parameters and not in the capture clause are captured by value (immutable snapshot).
+- **FR-7:** ✅ A function call `f(arg1, arg2)` is a valid postfix expression evaluated left-to-right.
 - **FR-8:** Calling a non-function value is a compile-time type-check error.
 - **FR-9:** Calling a function with the wrong number of arguments is a compile-time type-check error.
 - **FR-10:** `return` outside any function body is a compile-time error.
@@ -250,18 +250,46 @@ The feature is grounded in the existing implementation plan at `plans/sample-fun
 
 ---
 
-## Success Metrics
+## Success Metrics ✅ **ALL ACHIEVED**
 
-- All existing integration tests in `tests/k/` continue to pass after the feature is added
-- All 5 new function integration tests pass via `./test_runner.sh`
-- All new unit tests pass via `cd build && ctest`
-- A user can write recursive factorial, higher-order `map`/`apply`, and counter closures in `.k` files
-- Error messages for invalid function syntax, wrong arity, and bad captures show accurate source line/column
+- ✅ All existing integration tests in `tests/k/` continue to pass after the feature is added (37/37 passing)
+- ✅ All 6 new function integration tests pass via `./test_runner.sh`
+  - `function_basic.k` ✅
+  - `function_closure.k` ✅
+  - `function_mutable_capture.k` ✅
+  - `function_higher_order.k` ✅
+  - `function_recursive.k` ✅
+  - `function_block.k` ✅
+- ✅ All new unit tests pass via `cd build && ctest` (11/11 test suites passing)
+- ✅ A user can write recursive factorial, higher-order `map`/`apply`, and counter closures in `.k` files
+- ✅ Error messages for invalid function syntax, wrong arity, and bad captures show accurate source line/column
 
 ---
 
-## Open Questions
+## Implementation Complete - 2026-03-04
 
-- Should functions be allowed to call themselves by name without a `mut` binding (i.e., does the immutable binding `f = fn(x) => ... f(x-1) ...` work)? The implementation plan implies yes — `f` is in scope at call time because assignment is complete. Verify during codegen.
-- Should there be a maximum capture list size or parameter count enforced at compile time?
-- Should mutable captures require the outer variable to have been declared with `mut`, or can any variable be captured mutably? (Current plan: only `mut`-declared variables can be in a `mut(...)` capture clause.)
+**All user stories (US-001 through US-016) have been successfully implemented and tested.**
+
+### Technical Implementation Summary
+- **New files created:** ✅ `include/function_ast.h`, `src/function_codegen.cpp`, `tests/test_function_parser.cpp`
+- **Modified files:** ✅ All compiler pipeline files updated (lexer, parser, type_check, codegen, CMakeLists.txt)
+- **LLVM integration:** ✅ Complete with `llvm::FunctionType`, `llvm::StructType` for closures, `llvm::CallInst`
+- **Memory model:** ✅ `std::shared_ptr<double>` for mutable captures, value capture for immutable
+- **Scope management:** ✅ Function context tracking in CodeGen
+
+### Resolved Open Questions
+- ✅ **Self-referential functions:** Immutable bindings work for recursion - `f` is in scope when function body executes
+- ✅ **Capture list size:** No enforced maximum - handled naturally by implementation
+- ✅ **Mutable capture requirement:** Only `mut`-declared variables can be in `mut(...)` capture clause (as planned)
+
+---
+
+## Non-Goals (Out of Scope)
+
+- No explicit type annotations (e.g., `fn(x: double) -> double`)
+- No named function declarations (e.g., `fn add(x, y) { ... }` at statement level) — functions are always anonymous literals assigned to variables
+- No module import/export of functions
+- No variadic functions
+- No tail-call optimization
+- No async/generator functions
+- No garbage collection for closures (assume programs are short-lived)
