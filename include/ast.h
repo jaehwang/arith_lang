@@ -194,11 +194,74 @@ public:
     const std::vector<std::unique_ptr<ASTNode>>& getStatements() const { return statements; }
 };
 
+enum class ImportType { Named, Namespace, Default };
+
+struct ImportedSymbol {
+    std::string name;
+    std::string alias;
+};
+
+class ImportStmtAST : public ASTNode {
+    std::string moduleName;
+    ImportType importType;
+    std::vector<ImportedSymbol> symbols;
+    std::string alias;
+    SourceLocation location;
+public:
+    ImportStmtAST(std::string moduleName, ImportType importType, std::vector<ImportedSymbol> symbols, std::string alias, SourceLocation loc)
+        : moduleName(std::move(moduleName)), importType(importType), symbols(std::move(symbols)), alias(std::move(alias)), location(std::move(loc)) {}
+    
+    llvm::Value* codegen() override { return nullptr; }
+    
+    const std::string& getModuleName() const { return moduleName; }
+    ImportType getImportType() const { return importType; }
+    const std::vector<ImportedSymbol>& getSymbols() const { return symbols; }
+    const std::string& getAlias() const { return alias; }
+    const SourceLocation& getLocation() const { return location; }
+};
+
+enum class ExportType { Named, Function, Default, Assignment };
+
+struct ExportedSymbol {
+    std::string name;
+    std::string alias;
+};
+
+class ExportStmtAST : public ASTNode {
+    ExportType exportType;
+    std::vector<ExportedSymbol> symbols;
+    std::unique_ptr<ASTNode> declaration;
+    SourceLocation location;
+public:
+    ExportStmtAST(ExportType exportType, std::vector<ExportedSymbol> symbols, std::unique_ptr<ASTNode> declaration, SourceLocation loc)
+        : exportType(exportType), symbols(std::move(symbols)), declaration(std::move(declaration)), location(std::move(loc)) {}
+    
+    llvm::Value* codegen() override;
+    
+    ExportType getExportType() const { return exportType; }
+    const std::vector<ExportedSymbol>& getSymbols() const { return symbols; }
+    ASTNode* getDeclaration() const { return declaration.get(); }
+    const SourceLocation& getLocation() const { return location; }
+};
+
 class ProgramAST : public ASTNode {
+    std::vector<std::unique_ptr<ImportStmtAST>> imports;
+    std::vector<std::unique_ptr<ExportStmtAST>> exports;
     std::vector<std::unique_ptr<ASTNode>> statements;
 public:
     ProgramAST(std::vector<std::unique_ptr<ASTNode>> statements)
         : statements(std::move(statements)) {}
+    ProgramAST(std::vector<std::unique_ptr<ImportStmtAST>> imports,
+               std::vector<std::unique_ptr<ExportStmtAST>> exports,
+               std::vector<std::unique_ptr<ASTNode>> statements)
+        : imports(std::move(imports)), exports(std::move(exports)), statements(std::move(statements)) {}
     llvm::Value* codegen() override;
+    
+    const std::vector<std::unique_ptr<ImportStmtAST>>& getImports() const { return imports; }
+    const std::vector<std::unique_ptr<ExportStmtAST>>& getExports() const { return exports; }
     const std::vector<std::unique_ptr<ASTNode>>& getStatements() const { return statements; }
+
+    std::vector<std::unique_ptr<ImportStmtAST>> releaseImports() { return std::move(imports); }
+    std::vector<std::unique_ptr<ExportStmtAST>> releaseExports() { return std::move(exports); }
+    std::vector<std::unique_ptr<ASTNode>> releaseStatements() { return std::move(statements); }
 };

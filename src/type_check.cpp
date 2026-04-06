@@ -334,8 +334,14 @@ void typeCheckNode(ASTNode* node, TypeEnv& env, const std::string& filename) {
     }
 
     // Program: global scope
+    // Program: global scope
     if (auto program = dynamic_cast<ProgramAST*>(node)) {
         env.enterScope();
+        for (const auto& exp : program->getExports()) {
+            if (exp->getDeclaration()) {
+                typeCheckNode(exp->getDeclaration(), env, filename);
+            }
+        }
         for (const auto& stmt : program->getStatements()) {
             typeCheckNode(stmt.get(), env, filename);
         }
@@ -344,6 +350,7 @@ void typeCheckNode(ASTNode* node, TypeEnv& env, const std::string& filename) {
     }
 }
 } // namespace
+
 
 void typeCheck(ASTNode* node, const std::string& filename) {
     TypeEnv env;

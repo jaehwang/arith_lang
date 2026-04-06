@@ -557,8 +557,20 @@ llvm::Value* BlockAST::codegen() {
     return lastValue ? lastValue : llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
 }
 
+llvm::Value* ExportStmtAST::codegen() {
+    if (declaration) {
+        return declaration->codegen();
+    }
+    return llvm::ConstantFP::get(codeGenInstance->getContext(), llvm::APFloat(0.0));
+}
+
 llvm::Value* ProgramAST::codegen() {
     llvm::Value* lastValue = nullptr;
+    
+    for (const auto& exp : exports) {
+        lastValue = exp->codegen();
+        if (!lastValue) return nullptr;
+    }
     
     for (const auto& stmt : statements) {
         lastValue = stmt->codegen();

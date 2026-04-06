@@ -43,7 +43,12 @@ enum TokenType {
     TOK_MUT = -13,
     TOK_FN = -14,
     TOK_RETURN = -15,
-    TOK_ARROW = -16
+    TOK_ARROW = -16,
+    TOK_IMPORT = -17,
+    TOK_EXPORT = -18,
+    TOK_FROM = -19,
+    TOK_AS = -20,
+    TOK_DEFAULT = -21
 };
 
 struct Token {

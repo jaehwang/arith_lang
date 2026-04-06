@@ -144,6 +144,16 @@ Token Lexer::handleKeywordOrIdentifier(const std::string& identifier, const Sour
         return Token(TOK_FN, identifier, 0.0, r);
     } else if (identifier == "return") {
         return Token(TOK_RETURN, identifier, 0.0, r);
+    } else if (identifier == "import") {
+        return Token(TOK_IMPORT, identifier, 0.0, r);
+    } else if (identifier == "export") {
+        return Token(TOK_EXPORT, identifier, 0.0, r);
+    } else if (identifier == "from") {
+        return Token(TOK_FROM, identifier, 0.0, r);
+    } else if (identifier == "as") {
+        return Token(TOK_AS, identifier, 0.0, r);
+    } else if (identifier == "default") {
+        return Token(TOK_DEFAULT, identifier, 0.0, r);
     }
     return Token(TOK_IDENTIFIER, identifier, 0.0, r);
 }

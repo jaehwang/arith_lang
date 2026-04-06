@@ -3,6 +3,7 @@
 #include "codegen.h"
 #include "ast.h"
 #include "type_check.h"
+#include "module_resolver.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/BasicBlock.h"
@@ -121,12 +122,8 @@ void setupLLVMFunction(const std::string& inputFile) {
 }
 
 void compileSource(const std::string& input, const std::string& filename) {
-    // Ensure lexer knows the actual filename for accurate error reporting
-    Lexer lexer(input, filename);
-    Parser parser(lexer);
-    
-    // Parse entire program as single AST
-    auto programAST = parser.parseProgram();
+    ModuleResolver resolver;
+    auto programAST = resolver.resolve(filename);
     if (!programAST) {
         throw std::runtime_error("프로그램 파싱 실패");
     }
@@ -168,14 +165,11 @@ int main(int argc, char* argv[]) {
         // 명령행 처리
         CompilerOptions options = parseCommandLine(argc, argv);
         
-        // 입력 파일 읽기
-        std::string input = readFile(options.inputFile);
-        
         // LLVM 함수 설정
         setupLLVMFunction(options.inputFile);
         
         // 소스 컴파일
-        compileSource(input, options.inputFile);
+        compileSource("", options.inputFile);
         
         // IR 저장
         saveIRToFile(options.outputFile);

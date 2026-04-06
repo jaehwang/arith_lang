@@ -41,6 +41,8 @@ private:
     std::unique_ptr<ExprAST> parseFunctionCall(std::unique_ptr<ExprAST> callee);
     std::vector<CapturedVariable> parseCaptureClause();
     std::unique_ptr<ASTNode> parseReturnStatement();
+    std::unique_ptr<ImportStmtAST> parseImportStatement();
+    std::unique_ptr<ExportStmtAST> parseExportStatement();
     int getTokenPrecedence();
     std::unique_ptr<ASTNode> parseStatement();
     [[noreturn]] void errorHere(const std::string& msg) {
@@ -52,5 +54,5 @@ private:
     
 public:
     Parser(Lexer& lexer);
-    std::unique_ptr<ASTNode> parseProgram();
+    std::unique_ptr<ProgramAST> parseProgram();
 };
